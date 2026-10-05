@@ -1,0 +1,1473 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#3d9ddf"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sëtal AAAS"><meta name="description" content="Vidange et curage à la demande par les membres de l'AAAS">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+</head><body>
+<title>Sëtal AAAS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+/* Layout : bandeau de marque + onglets par acteur ; pour Client / Vidangeur / Garage, un téléphone interactif à gauche et un panneau « coulisses » à droite qui montre le calcul et les choix de conception. */
+:root{
+  --bg:#eaf3fb; --surface:#ffffff; --surface-2:#f2f7fc; --line:#d6e3ef; --line-2:#b9cde0;
+  --fg:#102437; --fg-2:#44596e; --fg-3:#7489a0;
+  --blue:#3d9ddf; --blue-ink:#1f74b3; --blue-soft:#dcedfa;
+  --orange:#f7731f; --orange-2:#f9a23f; --sun:#fad461; --orange-soft:#fdeadb;
+  --ok:#1f9467; --ok-soft:#dcf3e8; --warn:#b67a12; --warn-soft:#fbf0d5; --bad:#c8392f; --bad-soft:#fbe2df;
+  --phone:#0e1b29; --screen:#f7fbff;
+  --shadow:0 1px 2px rgba(16,36,55,.06),0 6px 20px rgba(16,36,55,.07);
+  --f-display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Nunito Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1724; --surface:#132334; --surface-2:#192c40; --line:#243a52; --line-2:#33506d;
+  --fg:#e6f0f9; --fg-2:#aec2d6; --fg-3:#7f97ad;
+  --blue:#5cb4f0; --blue-ink:#86c8f5; --blue-soft:#17344d;
+  --orange:#ff8a3d; --orange-2:#ffb15c; --sun:#ffd970; --orange-soft:#3d2615;
+  --ok:#4fcf98; --ok-soft:#173a2c; --warn:#e6b453; --warn-soft:#3b2f15; --bad:#ff7d70; --bad-soft:#47201d;
+  --phone:#02080f; --screen:#0f1e2e; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1724; --surface:#132334; --surface-2:#192c40; --line:#243a52; --line-2:#33506d;
+  --fg:#e6f0f9; --fg-2:#aec2d6; --fg-3:#7f97ad;
+  --blue:#5cb4f0; --blue-ink:#86c8f5; --blue-soft:#17344d;
+  --orange:#ff8a3d; --orange-2:#ffb15c; --sun:#ffd970; --orange-soft:#3d2615;
+  --ok:#4fcf98; --ok-soft:#173a2c; --warn:#e6b453; --warn-soft:#3b2f15; --bad:#ff7d70; --bad-soft:#47201d;
+  --phone:#02080f; --screen:#0f1e2e; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3,h4{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:0 60px}
+@media (max-width:560px){.wrap{padding-inline:16px}}
+
+/* bandeau */
+.mast{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:20px 14px}
+.mast img{width:62px;height:auto;flex:none}
+.mast .nm{display:flex;flex-direction:column}
+.mast h1{font-size:34px;font-weight:800;letter-spacing:.01em;color:var(--fg)}
+.mast h1 span{color:var(--blue)}
+.mast .tag{color:var(--fg-2);font-size:14.5px}
+.mast .grow{flex:1}
+.proto{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:4px 10px}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:2px solid var(--line);margin-bottom:22px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:10;padding-top:6px}
+.tabs button{border:0;background:none;padding:10px 14px 12px;font-weight:700;font-size:15px;color:var(--fg-2);cursor:pointer;border-radius:10px 10px 0 0;position:relative;display:flex;gap:8px;align-items:center}
+.tabs button small{font-weight:600;font-size:12px;color:var(--fg-3)}
+.tabs button:hover{color:var(--fg)}
+.tabs button.on{color:var(--blue-ink)}
+.tabs button.on::after{content:"";position:absolute;left:8px;right:8px;bottom:-2px;height:3px;border-radius:3px;background:linear-gradient(90deg,var(--orange),var(--sun))}
+@media (max-width:700px){.tabs{overflow-x:auto;flex-wrap:nowrap}.tabs button small{display:none}.tabs button{white-space:nowrap;padding:10px 10px 12px}}
+
+/* scène téléphone + coulisses */
+.stage{display:grid;grid-template-columns:400px minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:980px){.stage{grid-template-columns:minmax(0,1fr)}}
+.phone{width:390px;max-width:100%;margin:0 auto;background:var(--phone);border-radius:44px;padding:12px;box-shadow:0 30px 60px rgba(16,36,55,.25),inset 0 0 0 2px rgba(255,255,255,.06);position:sticky;top:76px}
+@media (max-width:980px){.phone{position:relative;top:0}}
+@media (max-width:440px){.phone{padding:0;border-radius:18px;background:none;box-shadow:none}.phone .notch{display:none}.screen{border-radius:18px;border:1px solid var(--line)}}
+.notch{width:110px;height:24px;background:var(--phone);border-radius:0 0 16px 16px;margin:0 auto -24px;position:relative;z-index:3}
+.screen{background:var(--screen);border-radius:34px;height:740px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.sbar{display:flex;justify-content:space-between;padding:10px 26px 4px;font-size:12px;font-weight:700;color:var(--fg-2);flex:none}
+.appbar{display:flex;align-items:center;gap:10px;padding:6px 16px 10px;flex:none}
+.appbar img{width:34px}
+.appbar b{font-family:var(--f-display);font-size:19px;font-weight:800;line-height:1}
+.appbar small{display:block;font-size:11px;color:var(--fg-3);font-weight:600}
+.appbar .grow{flex:1}
+.back{border:0;background:var(--surface);width:34px;height:34px;border-radius:50%;cursor:pointer;display:grid;place-items:center;box-shadow:var(--shadow)}
+.scr>*{flex-shrink:0}
+.scr{flex:1;overflow-y:auto;padding:4px 16px 18px;display:flex;flex-direction:column;gap:12px;min-height:0}
+.foot{flex:none;padding:10px 16px 18px;background:linear-gradient(transparent,var(--screen) 30%)}
+.navb{flex:none;display:flex;justify-content:space-around;border-top:1px solid var(--line);padding:8px 6px 16px;background:var(--surface)}
+.navb button{border:0;background:none;font-size:11px;font-weight:700;color:var(--fg-3);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:2px 8px}
+.navb button.on{color:var(--blue-ink)}
+.navb svg{width:22px;height:22px}
+
+/* composants téléphone */
+.hello{font-family:var(--f-display);font-size:24px;font-weight:700;line-height:1.15}
+.hello em{font-style:normal;color:var(--orange)}
+.ref{display:flex;gap:10px;align-items:center;background:var(--blue-soft);border-radius:12px;padding:9px 12px;font-size:13px;color:var(--blue-ink)}
+.ref svg{width:20px;height:20px;flex:none}
+.svc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.svc button{border:2px solid var(--line);background:var(--surface);border-radius:16px;padding:12px 6px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;font-size:13px;line-height:1.2;text-align:center}
+.svc button svg{width:38px;height:38px}
+.svc button.on{border-color:var(--blue);background:var(--blue-soft)}
+.when{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.big{border:0;border-radius:16px;padding:14px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;font-weight:800;font-size:16px}
+.big small{font-weight:600;font-size:12px;opacity:.85}
+.big.now{background:linear-gradient(135deg,var(--orange),var(--orange-2));color:#fff}
+.big.plan{background:var(--surface);border:2px solid var(--blue);color:var(--blue-ink)}
+.cta{width:100%;border:0;border-radius:16px;padding:14px;font-weight:800;font-size:16px;cursor:pointer;background:var(--blue);color:#fff;display:flex;justify-content:center;align-items:center;gap:8px}
+.cta.or{background:linear-gradient(135deg,var(--orange),var(--orange-2))}
+.cta.ghost{background:var(--surface);color:var(--blue-ink);border:2px solid var(--line)}
+.cta[disabled]{opacity:.45;cursor:not-allowed}
+.card{background:var(--surface);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+.lbl{font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-3)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 11px;font-size:13px;font-weight:700;cursor:pointer;line-height:1.2}
+.chip small{font-weight:600;color:var(--fg-3);margin-left:3px}
+.chip.on{border-color:var(--blue);background:var(--blue-soft);color:var(--blue-ink)}
+.tog{display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer}
+.tog input{width:40px;height:22px;appearance:none;background:var(--line-2);border-radius:999px;position:relative;cursor:pointer;flex:none;transition:background .15s}
+.tog input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+.tog input:checked{background:var(--ok)}
+.tog input:checked::after{left:21px}
+.tog span{flex:1}
+.tog small{display:block;color:var(--fg-3);font-size:12px}
+.inp{width:100%;padding:9px 11px;border:2px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{min-width:0}
+.price{display:flex;align-items:baseline;gap:6px}
+.price b{font-family:var(--f-display);font-size:38px;font-weight:800;line-height:1}
+.price span{font-weight:700;color:var(--fg-2)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--fg-2);white-space:nowrap}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.or{background:var(--orange-soft);color:var(--orange)}
+.badge.bl{background:var(--blue-soft);color:var(--blue-ink)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.drv{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;border:2px solid var(--line);border-radius:16px;padding:10px;background:var(--surface);cursor:pointer;text-align:left}
+.drv.on{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-soft)}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;font-family:var(--f-display);font-size:18px}
+.drv .n{font-weight:800;font-size:14.5px;line-height:1.2}
+.drv .m{font-size:12px;color:var(--fg-3);line-height:1.35}
+.drv .eta{text-align:right;font-weight:800;font-size:15px;line-height:1.1}
+.drv .eta small{display:block;font-size:11px;font-weight:600;color:var(--fg-3)}
+.stars{color:var(--sun);letter-spacing:1px}
+.pay{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pay button{border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:10px;cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px}
+.pay button.on{border-color:var(--blue);background:var(--blue-soft)}
+.pay i{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px;color:#fff;flex:none}
+.note{font-size:12.5px;color:var(--fg-2);background:var(--surface-2);border-radius:12px;padding:9px 11px}
+.note.ok{background:var(--ok-soft);color:var(--ok)}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.tl li{display:grid;grid-template-columns:22px 1fr;gap:10px;padding-bottom:12px;position:relative;font-size:13.5px}
+.tl li::before{content:"";position:absolute;left:10px;top:20px;bottom:0;width:2px;background:var(--line)}
+.tl li:last-child::before{display:none}
+.tl .pt{width:22px;height:22px;border-radius:50%;border:2px solid var(--line-2);background:var(--surface);display:grid;place-items:center;font-size:11px;color:#fff;z-index:1}
+.tl li.done .pt{background:var(--ok);border-color:var(--ok)}
+.tl li.cur .pt{background:var(--orange);border-color:var(--orange);box-shadow:0 0 0 4px var(--orange-soft)}
+.tl li b{display:block;line-height:1.3}
+.tl li small{color:var(--fg-3)}
+.code{font-family:var(--f-mono);font-size:26px;font-weight:600;letter-spacing:.3em;color:var(--blue-ink)}
+.map{border-radius:16px;overflow:hidden;background:var(--surface-2);border:1px solid var(--line)}
+.map svg{display:block;width:100%;height:auto}
+.photo{border-radius:14px;overflow:hidden;position:relative;background:var(--surface-2);aspect-ratio:4/3;max-width:100%}
+.photo img,.photo svg{width:100%;height:100%;object-fit:cover;display:block}
+.photo .stamp{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;font-size:10.5px;padding:3px 7px;border-radius:6px;font-family:var(--f-mono)}
+.rcpt{background:var(--surface);border-radius:16px;padding:14px;box-shadow:var(--shadow);font-size:13px;position:relative}
+.rcpt::after{content:"";position:absolute;left:0;right:0;bottom:-8px;height:8px;background:radial-gradient(circle at 6px -2px,transparent 6px,var(--surface) 6.5px) repeat-x;background-size:12px 8px}
+.rcpt .hd{display:flex;gap:8px;align-items:center;border-bottom:1px dashed var(--line-2);padding-bottom:8px;margin-bottom:8px}
+.rcpt .hd img{width:30px}
+.rcpt .ln{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
+.rcpt .ln span:last-child{font-family:var(--f-mono);white-space:nowrap}
+.rcpt .tot{border-top:1px dashed var(--line-2);margin-top:6px;padding-top:6px;font-weight:800;font-size:15px}
+.qr{display:flex;gap:10px;align-items:center;margin-top:10px}
+.qr .q{background:#fff;padding:5px;border-radius:8px;flex:none;line-height:0}
+.qr .q img,.qr .q canvas{width:72px!important;height:72px!important}
+.rate{display:flex;gap:4px;justify-content:center}
+.rate button{border:0;background:none;font-size:34px;cursor:pointer;color:var(--line-2);line-height:1;padding:0 2px}
+.rate button.on{color:var(--sun)}
+.anom{display:flex;gap:8px;align-items:flex-start;font-size:13px;background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:8px 10px}
+.done-hero{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0}
+.done-hero .ck{width:62px;height:62px;border-radius:50%;background:var(--ok);display:grid;place-items:center;color:#fff}
+
+/* vidangeur */
+.online{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border-radius:16px;padding:10px 14px;box-shadow:var(--shadow)}
+.online b{font-size:15px}
+.kp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kp div{background:var(--surface);border-radius:14px;padding:8px 10px;box-shadow:var(--shadow)}
+.kp b{display:block;font-family:var(--f-display);font-size:20px;line-height:1.1}
+.kp small{font-size:11px;color:var(--fg-3);font-weight:700}
+.req{border:2px solid var(--orange);background:var(--surface);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(247,115,31,.25)}50%{box-shadow:0 0 0 8px rgba(247,115,31,0)}}
+.planbar{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:12px;padding:3px;gap:3px}
+.planbar button{border:0;background:none;border-radius:10px;padding:7px;font-weight:800;font-size:13px;cursor:pointer;color:var(--fg-2)}
+.planbar button.on{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
+.planbar button.on.pr{color:var(--orange)}
+.lock{display:flex;gap:10px;align-items:center;background:var(--surface-2);border:2px dashed var(--line-2);border-radius:14px;padding:10px 12px;font-size:13px;color:var(--fg-2)}
+.mini{width:100%;border-collapse:collapse;font-size:12.5px}
+.mini td,.mini th{padding:5px 2px;border-bottom:1px solid var(--line);text-align:left}
+.mini th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-3)}
+.mini .r{text-align:right;font-family:var(--f-mono);white-space:nowrap}
+.mini tr.t td{font-weight:800;border-bottom:0}
+
+/* coulisses (panneau de droite) */
+.side{display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);min-width:0}
+.panel>header{padding:14px 18px 10px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.panel>header h3{font-size:19px;font-weight:700}
+.panel>header .h{color:var(--fg-3);font-size:13px}
+.panel .bd{padding:14px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.eyebrow{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--orange)}
+.lead{font-size:16px;color:var(--fg-2);max-width:68ch}
+.why{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.why{grid-template-columns:minmax(0,1fr)}}
+.why li{background:var(--surface-2);border-radius:12px;padding:10px 12px;font-size:13.5px;color:var(--fg-2)}
+.why li b{color:var(--fg);display:block;font-size:14px}
+.brk{width:100%;border-collapse:collapse;font-size:14px}
+.brk td{padding:7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.brk td:last-child{text-align:right;font-family:var(--f-mono);white-space:nowrap;padding-left:12px}
+.brk td small{display:block;color:var(--fg-3);font-size:12px}
+.brk tr.t td{font-weight:800;font-size:16px;border-bottom:0}
+.brk tr.mod td{color:var(--orange)}
+.sim{display:flex;flex-wrap:wrap;gap:14px}
+.tbl-wrap{overflow-x:auto}
+table.tb{width:100%;border-collapse:collapse;font-size:14px}
+.tb th{text-align:left;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-3);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tb td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tb td.r,.tb th.r{text-align:right}
+.tb td.num{white-space:nowrap}
+.tb tr:last-child td{border-bottom:0}
+.yes{color:var(--ok);font-weight:800}.no{color:var(--fg-3)}
+.slider{display:flex;flex-direction:column;gap:4px;min-width:200px;flex:1}
+.slider label{font-size:13px;font-weight:700;color:var(--fg-2);display:flex;justify-content:space-between;gap:8px}
+.slider label b{font-family:var(--f-mono);color:var(--fg)}
+.slider input{width:100%;accent-color:var(--orange)}
+.cmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:560px){.cmp{grid-template-columns:minmax(0,1fr)}}
+.cmp>div{border:2px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.cmp>div.best{border-color:var(--ok)}
+.cmp .v{font-family:var(--f-display);font-size:26px;font-weight:800;line-height:1.1}
+.cmp .s{font-size:12.5px;color:var(--fg-3)}
+.hbar{height:12px;border-radius:6px;background:var(--surface-2);overflow:hidden;display:flex}
+.hbar i{display:block;height:100%}
+.callout{border-left:4px solid var(--orange);background:var(--orange-soft);border-radius:0 12px 12px 0;padding:10px 14px;font-size:14px;color:var(--fg)}
+.callout.bl{border-color:var(--blue);background:var(--blue-soft)}
+
+/* AAAS pilotage */
+.g{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:1000px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.g2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:460px){.g4{grid-template-columns:minmax(0,1fr)}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .l{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-3);font-weight:800}
+.tile .v{font-family:var(--f-display);font-size:30px;font-weight:800;line-height:1.05}
+.tile .v small{font-size:15px;color:var(--fg-2);font-weight:600;margin-left:3px}
+.tile .m{font-size:13px;color:var(--fg-2)}
+.tile.acc{border-top:4px solid var(--orange)}
+.chart text{fill:var(--fg-3);font-family:var(--f-mono);font-size:10.5px}
+.chart .gl{stroke:var(--line)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--fg-2)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.sw{width:12px;height:10px;border-radius:3px;display:inline-block}
+.pill{display:inline-flex;font-size:12px;font-weight:800;padding:2px 9px;border-radius:999px;white-space:nowrap;background:var(--surface-2);color:var(--fg-2)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.bad{background:var(--bad-soft);color:var(--bad)}.pill.bl{background:var(--blue-soft);color:var(--blue-ink)}.pill.or{background:var(--orange-soft);color:var(--orange)}
+.bar{height:8px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--blue);border-radius:5px}
+
+/* modèle */
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;counter-reset:s}
+@media (max-width:900px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.steps{grid-template-columns:minmax(0,1fr)}}
+.steps>div{background:var(--surface-2);border-radius:12px;padding:12px;font-size:13.5px;color:var(--fg-2);counter-increment:s}
+.steps>div::before{content:counter(s);display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;font-weight:800;margin-bottom:6px;font-family:var(--f-display)}
+.steps>div b{display:block;color:var(--fg);font-size:14.5px}
+.flyer{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;background:linear-gradient(135deg,var(--blue),#2a7fc0);color:#fff;border-radius:18px;padding:18px;max-width:520px}
+.flyer .q{background:#fff;padding:8px;border-radius:12px;line-height:0}
+.flyer .q img,.flyer .q canvas{width:120px!important;height:120px!important}
+.flyer h4{font-size:24px;font-weight:800;color:#fff}
+.flyer p{margin:4px 0 0;font-size:13.5px;opacity:.92}
+.flyer .cd{display:inline-block;margin-top:8px;background:rgba(255,255,255,.18);border-radius:8px;padding:3px 8px;font-family:var(--f-mono);font-size:12px}
+@media (max-width:480px){.flyer{grid-template-columns:minmax(0,1fr);justify-items:start}}
+.road{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:800px){.road{grid-template-columns:minmax(0,1fr)}}
+.road>div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface);display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:var(--fg-2)}
+.road h4{font-size:17px;color:var(--fg)}
+.road ul{margin:0;padding-left:18px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;max-width:calc(100% - 32px)}
+.muted{color:var(--fg-3)}
+.stack{display:flex;flex-direction:column;gap:10px}
+.sep{height:1px;background:var(--line)}
+.sec-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:6px 0 2px}
+.sec-h h2{font-size:26px;font-weight:800}
+.sec-h p{margin:0;color:var(--fg-2)}
+@media (max-width:760px){#fleetgrid{grid-template-columns:minmax(0,1fr)!important}}
+.radar{width:150px;height:150px;margin:6px auto 0;position:relative;border-radius:50%;background:radial-gradient(circle,var(--blue-soft) 0 35%,transparent 36%);display:grid;place-items:center}
+.radar span{position:absolute;inset:0;border-radius:50%;border:2px solid var(--blue);opacity:0;animation:ring 2.4s infinite}
+.radar span:nth-child(2){animation-delay:.8s}.radar span:nth-child(3){animation-delay:1.6s}
+.radar b{font-size:30px;position:relative}
+@keyframes ring{0%{transform:scale(.3);opacity:.8}100%{transform:scale(1);opacity:0}}
+.scanrow{display:flex;gap:8px;align-items:center;background:var(--surface);border-radius:12px;padding:7px 10px;box-shadow:var(--shadow);font-size:13px;animation:fadein .3s}
+.scanrow small{display:block;color:var(--fg-3);font-size:11.5px}
+.scanrow.off{opacity:.55}
+.scanrow .pts{font-size:11.5px;color:var(--orange);font-weight:600;white-space:nowrap}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}}
+.av.sm{width:30px;height:30px;font-size:12px;flex:none}
+.kv2{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv2 span{color:var(--fg-3)}
+.kv2 b{min-width:0}
+.notif{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border-radius:16px;padding:10px 12px;box-shadow:0 8px 24px rgba(16,36,55,.18);font-size:12.5px;animation:drop .5s}
+.notif img{width:30px;flex:none}
+.notif b{display:block;font-size:12px;color:var(--fg-3)}
+@keyframes drop{from{transform:translateY(-16px);opacity:0}}
+.seg2{display:inline-flex;border:2px solid var(--line);border-radius:10px;overflow:hidden;flex:none}
+.seg2 button{border:0;background:var(--surface);padding:4px 10px;font-weight:800;font-size:12.5px;cursor:pointer}
+.seg2 button.on{background:var(--ok);color:#fff}
+.seg2 button.on.no{background:var(--bad)}
+.adj{background:var(--surface-2);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.proto.live{color:var(--ok);background:var(--ok-soft)}
+.foot-note{font-size:12.5px;color:var(--fg-3);margin-top:22px}
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIzNDUgMTkwIDI3MCAyMjUiPgo8ZGVmcz4KPGNsaXBQYXRoIGlkPSJjbGlwLTAiPgo8cGF0aCBjbGlwLXJ1bGU9Im5vbnplcm8iIGQ9Ik0gMzU2IDI0MSBMIDUxNyAyNDEgTCA1MTcgNDA4IEwgMzU2IDQwOCBaIE0gMzU2IDI0MSAiLz4KPC9jbGlwUGF0aD4KPGNsaXBQYXRoIGlkPSJjbGlwLTEiPgo8cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0gNDM4LjE0ODQzOCA0MDcuMTEzMjgxIEMgNDcxLjI1NzgxMiA0MDcuMTEzMjgxIDQ5OC4zNDM3NSAzODAuMDI3MzQ0IDQ5OC4zNDM3NSAzNDYuOTIxODc1IEwgNDk4LjM0Mzc1IDMwNS4wNzQyMTkgTCA1MDcuNTE5NTMxIDMwNS4wNzQyMTkgQyA1MTIuNTYyNSAzMDUuMDc0MjE5IDUxNi42ODc1IDMwMC45NDkyMTkgNTE2LjY4NzUgMjk1LjkwMjM0NCBDIDUxNi42ODc1IDI5MC44NTkzNzUgNTEyLjU2MjUgMjg2LjczMDQ2OSA1MDcuNTE5NTMxIDI4Ni43MzA0NjkgTCA0MzguMTQ4NDM4IDI4Ni43MzA0NjkgQyA0MDUuMDQ2ODc1IDI4Ni43MzA0NjkgMzc3Ljk2MDkzOCAzMTMuODE2NDA2IDM3Ny45NjA5MzggMzQ2LjkyMTg3NSBDIDM3Ny45NjA5MzggMzgwLjAyNzM0NCA0MDUuMDQ2ODc1IDQwNy4xMTMyODEgNDM4LjE0ODQzOCA0MDcuMTEzMjgxIFogTSAzNzkuOTY4NzUgMjQxLjczMDQ2OSBDIDM2Ni45ODQzNzUgMjQxLjczMDQ2OSAzNTYuNDYwOTM4IDI1Mi4yNTM5MDYgMzU2LjQ2MDkzOCAyNjUuMjMwNDY5IEMgMzU2LjQ2MDkzOCAyNzguMjE0ODQ0IDM2Ni45ODQzNzUgMjg4LjczNDM3NSAzNzkuOTY4NzUgMjg4LjczNDM3NSBDIDM5Mi45NDkyMTkgMjg4LjczNDM3NSA0MDMuNDcyNjU2IDI3OC4yMTQ4NDQgNDAzLjQ3MjY1NiAyNjUuMjMwNDY5IEMgNDAzLjQ3MjY1NiAyNTIuMjUzOTA2IDM5Mi45NDkyMTkgMjQxLjczMDQ2OSAzNzkuOTY4NzUgMjQxLjczMDQ2OSBaIE0gNDAxLjU1NDY4OCAzNjAuOTY4NzUgQyA0MDAuODA0Njg4IDM1OS4wMDc4MTIgMzk4LjYwNTQ2OSAzNTguMDIzNDM4IDM5Ni42NDA2MjUgMzU4Ljc3NzM0NCBDIDM5NC42Nzk2ODggMzU5LjUyMzQzOCAzOTMuNjk5MjE5IDM2MS43MjI2NTYgMzk0LjQ0OTIxOSAzNjMuNjg3NSBDIDM5Ny44NjMyODEgMzcyLjU5NzY1NiA0MDMuOTMzNTk0IDM4MC4xOTUzMTIgNDExLjY4MzU5NCAzODUuNTIzNDM4IEMgNDE5LjIzMDQ2OSAzOTAuNzEwOTM4IDQyOC4zNDc2NTYgMzkzLjc0MjE4OCA0MzguMTQ4NDM4IDM5My43NDIxODggQyA0NDAuMjYxNzE5IDM5My43NDIxODggNDQxLjk3NjU2MiAzOTIuMDMxMjUgNDQxLjk3NjU2MiAzODkuOTIxODc1IEMgNDQxLjk3NjU2MiAzODcuODA4NTk0IDQ0MC4yNjE3MTkgMzg2LjEwMTU2MiA0MzguMTQ4NDM4IDM4Ni4xMDE1NjIgQyA0MjkuOTA2MjUgMzg2LjEwMTU2MiA0MjIuMjY5NTMxIDM4My41NjY0MDYgNDE1Ljk4MDQ2OSAzNzkuMjQ2MDk0IEMgNDA5LjQ5NjA5NCAzNzQuNzg5MDYyIDQwNC40MTc5NjkgMzY4LjQyNTc4MSA0MDEuNTU0Njg4IDM2MC45Njg3NSBaIE0gMzk5LjI3NzM0NCAzNDEuOTUzMTI1IEMgMzk5LjUzOTA2MiAzMzkuODY3MTg4IDM5OC4wNjI1IDMzNy45NTcwMzEgMzk1Ljk3NjU2MiAzMzcuNjk1MzEyIEMgMzkzLjg5MDYyNSAzMzcuNDMzNTk0IDM5MS45ODQzNzUgMzM4LjkxNDA2MiAzOTEuNzIyNjU2IDM0MSBDIDM5MS41ODk4NDQgMzQyLjA1MDc4MSAzOTEuNDk2MDk0IDM0My4wMzEyNSAzOTEuNDM3NSAzNDMuOTUzMTI1IEMgMzkxLjM2NzE4OCAzNDUuMDExNzE5IDM5MS4zMzU5MzggMzQ2LjAwMzkwNiAzOTEuMzM1OTM4IDM0Ni45MjE4NzUgQyAzOTEuMzM1OTM4IDM0OS4wMzUxNTYgMzkzLjA0Njg3NSAzNTAuNzQyMTg4IDM5NS4xNTYyNSAzNTAuNzQyMTg4IEMgMzk3LjI2OTUzMSAzNTAuNzQyMTg4IDM5OC45NzY1NjIgMzQ5LjAzNTE1NiAzOTguOTc2NTYyIDM0Ni45MjE4NzUgQyAzOTguOTc2NTYyIDM0Ni4wMDM5MDYgMzk5LjAwMzkwNiAzNDUuMTcxODc1IDM5OS4wNTA3ODEgMzQ0LjQyNTc4MSBDIDM5OS4xMDU0NjkgMzQzLjUyMzQzOCAzOTkuMTgzNTk0IDM0Mi42OTE0MDYgMzk5LjI3NzM0NCAzNDEuOTUzMTI1IFogTSAzOTkuMjc3MzQ0IDM0MS45NTMxMjUgIi8+CjwvY2xpcFBhdGg+CjxsaW5lYXJHcmFkaWVudCBpZD0ibGluZWFyLXBhdHRlcm4tMCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIHgxPSIwIiB5MT0iMC4wMDAyMDA4MjkiIHgyPSIwIiB5Mj0iMzYuODYzMzk2IiBncmFkaWVudFRyYW5zZm9ybT0ibWF0cml4KC00LjQ4NjM5OSwgMCwgMCwgNC40ODYzOTksIDUxNi42ODg1OCwgMjQxLjcyOTA5OSkiPgo8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9InJnYig5OC4wMzc3MiUsIDg1LjA5Njc0MSUsIDM4LjAzODYzNSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjAwNzgxMjUiIHN0b3AtY29sb3I9InJnYig5OC4wMzMxNDIlLCA4NC45Mjg4OTQlLCAzNy45MzMzNSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjAxNTYyNSIgc3RvcC1jb2xvcj0icmdiKDk4LjAyMzk4NyUsIDg0LjU5MzIwMSUsIDM3LjcyMjc3OCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjAyMzQzNzUiIHN0b3AtY29sb3I9InJnYig5OC4wMTQ4MzIlLCA4NC4yNTc1MDclLCAzNy41MTIyMDclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wMzEyNSIgc3RvcC1jb2xvcj0icmdiKDk4LjAwNTY3NiUsIDgzLjkyMTgxNCUsIDM3LjMwMTYzNiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjAzOTA2MjUiIHN0b3AtY29sb3I9InJnYig5Ny45OTY1MjElLCA4My41ODYxMjElLCAzNy4wOTEwNjQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wNDY4NzUiIHN0b3AtY29sb3I9InJnYig5Ny45ODczNjYlLCA4My4yNTA0MjclLCAzNi44ODA0OTMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wNTQ2ODc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuOTc4MjElLCA4Mi45MTQ3MzQlLCAzNi42Njk5MjIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wNjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuOTY5MDU1JSwgODIuNTc5MDQxJSwgMzYuNDU5MzUxJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMDcwMzEyNSIgc3RvcC1jb2xvcj0icmdiKDk3Ljk1OTklLCA4Mi4yNDMzNDclLCAzNi4yNDg3NzklKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wNzgxMjUiIHN0b3AtY29sb3I9InJnYig5Ny45NTA3NDUlLCA4MS45MDc2NTQlLCAzNi4wMzY2ODIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wODU5Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuOTQxNTg5JSwgODEuNTcxOTYlLCAzNS44MjYxMTElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wOTM3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjkzMjQzNCUsIDgxLjIzNjI2NyUsIDM1LjYxNTU0JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMTAxNTYyIiBzdG9wLWNvbG9yPSJyZ2IoOTcuOTIzMjc5JSwgODAuOTAwNTc0JSwgMzUuNDA0OTY4JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMTA5Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuOTE0MTI0JSwgODAuNTY0ODglLCAzNS4xOTQzOTclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xMTcxODgiIHN0b3AtY29sb3I9InJnYig5Ny45MDQ5NjglLCA4MC4yMjc2NjElLCAzNC45ODM4MjYlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xMjUiIHN0b3AtY29sb3I9InJnYig5Ny44OTU4MTMlLCA3OS44OTE5NjglLCAzNC43NzMyNTQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xMzI4MTMiIHN0b3AtY29sb3I9InJnYig5Ny44ODY2NTglLCA3OS41NTYyNzQlLCAzNC41NjI2ODMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xNDA2MjUiIHN0b3AtY29sb3I9InJnYig5Ny44Nzc1MDIlLCA3OS4yMjA1ODElLCAzNC4zNTIxMTIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xNDg0MzgiIHN0b3AtY29sb3I9InJnYig5Ny44NjgzNDclLCA3OC44ODQ4ODglLCAzNC4xNDE1NDElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xNTYyNSIgc3RvcC1jb2xvcj0icmdiKDk3Ljg1OTE5MiUsIDc4LjU0OTE5NCUsIDMzLjkzMDk2OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjE2NDA2MyIgc3RvcC1jb2xvcj0icmdiKDk3Ljg1MDAzNyUsIDc4LjIxMzUwMSUsIDMzLjcyMDM5OCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjE3MTg3NSIgc3RvcC1jb2xvcj0icmdiKDk3Ljg0MDg4MSUsIDc3Ljg3NzgwOCUsIDMzLjUwOTgyNyUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjE3OTY4OCIgc3RvcC1jb2xvcj0icmdiKDk3LjgzMTcyNiUsIDc3LjU0MjExNCUsIDMzLjI5OTI1NSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjE4NzUiIHN0b3AtY29sb3I9InJnYig5Ny44MjI1NzElLCA3Ny4yMDY0MjElLCAzMy4wODg2ODQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xOTUzMTMiIHN0b3AtY29sb3I9InJnYig5Ny44MTM0MTYlLCA3Ni44NzA3MjglLCAzMi44NzgxMTMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4yMDMxMjUiIHN0b3AtY29sb3I9InJnYig5Ny44MDQyNiUsIDc2LjUzNTAzNCUsIDMyLjY2NzU0MiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjIxMDkzOCIgc3RvcC1jb2xvcj0icmdiKDk3Ljc5NTEwNSUsIDc2LjE5OTM0MSUsIDMyLjQ1Njk3JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjE4NzUiIHN0b3AtY29sb3I9InJnYig5Ny43ODU5NSUsIDc1Ljg2MzY0NyUsIDMyLjI0NjM5OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjIyNjU2MyIgc3RvcC1jb2xvcj0icmdiKDk3Ljc3Njc5NCUsIDc1LjUyNzk1NCUsIDMyLjAzNTgyOCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjIzNDM3NSIgc3RvcC1jb2xvcj0icmdiKDk3Ljc2NzYzOSUsIDc1LjE5MjI2MSUsIDMxLjgyNTI1NiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjI0MjE4OCIgc3RvcC1jb2xvcj0icmdiKDk3Ljc1ODQ4NCUsIDc0Ljg1NjU2NyUsIDMxLjYxNDY4NSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzQ5MzI5JSwgNzQuNTIwODc0JSwgMzEuNDA0MTE0JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjU3ODEyIiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzQwMTczJSwgNzQuMTg1MTgxJSwgMzEuMTkzNTQyJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjY1NjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzMxMDE4JSwgNzMuODQ5NDg3JSwgMzAuOTgyOTcxJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjczNDM3IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzIxODYzJSwgNzMuNTEzNzk0JSwgMzAuNzcyNCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjI4MTI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzEyNzA4JSwgNzMuMTc4MTAxJSwgMzAuNTYxODI5JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjg5MDYyIiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzAzNTUyJSwgNzIuODQwODgxJSwgMzAuMzUxMjU3JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjk2ODc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNjk0Mzk3JSwgNzIuNTA1MTg4JSwgMzAuMTQwNjg2JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzA0Njg3IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNjg1MjQyJSwgNzIuMTY5NDk1JSwgMjkuOTMwMTE1JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzEyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjY3NjA4NiUsIDcxLjgzMzgwMSUsIDI5LjcxOTU0MyUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjMyMDMxMiIgc3RvcC1jb2xvcj0icmdiKDk3LjY2NjkzMSUsIDcxLjQ5ODEwOCUsIDI5LjUwODk3MiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjMyODEyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjY1Nzc3NiUsIDcxLjE2MjQxNSUsIDI5LjI5ODQwMSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjMzNTkzOCIgc3RvcC1jb2xvcj0icmdiKDk3LjY0ODYyMSUsIDcwLjgyNjcyMSUsIDI5LjA4NzgzJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzQzNzUiIHN0b3AtY29sb3I9InJnYig5Ny42Mzk0NjUlLCA3MC40OTEwMjglLCAyOC44NzcyNTglKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4zNTE1NjMiIHN0b3AtY29sb3I9InJnYig5Ny42MzAzMSUsIDcwLjE1NTMzNCUsIDI4LjY2NTE2MSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjM1OTM3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjYyMTE1NSUsIDY5LjgxOTY0MSUsIDI4LjQ1NDU5JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzY3MTg4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNjEyJSwgNjkuNDgzOTQ4JSwgMjguMjQ0MDE5JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNjAyODQ0JSwgNjkuMTQ4MjU0JSwgMjguMDMzNDQ3JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzgyODEzIiBzdG9wLWNvbG9yPSJyZ2IoOTcuNTkzNjg5JSwgNjguODEyNTYxJSwgMjcuODIyODc2JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzkwNjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNTg0NTM0JSwgNjguNDc2ODY4JSwgMjcuNjEyMzA1JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzk4NDM4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNTc1Mzc4JSwgNjguMTQxMTc0JSwgMjcuNDAxNzMzJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNDA2MjUiIHN0b3AtY29sb3I9InJnYig5Ny41NjYyMjMlLCA2Ny44MDU0ODElLCAyNy4xOTExNjIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40MTQwNjMiIHN0b3AtY29sb3I9InJnYig5Ny41NTcwNjglLCA2Ny40Njk3ODglLCAyNi45ODA1OTElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40MjE4NzUiIHN0b3AtY29sb3I9InJnYig5Ny41NDc5MTMlLCA2Ny4xMzQwOTQlLCAyNi43NzAwMiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjQyOTY4OCIgc3RvcC1jb2xvcj0icmdiKDk3LjUzODc1NyUsIDY2Ljc5ODQwMSUsIDI2LjU1OTQ0OCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjQzNzUiIHN0b3AtY29sb3I9InJnYig5Ny41Mjk2MDIlLCA2Ni40NjI3MDglLCAyNi4zNDg4NzclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40NDUzMTMiIHN0b3AtY29sb3I9InJnYig5Ny41MjA0NDclLCA2Ni4xMjcwMTQlLCAyNi4xMzgzMDYlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40NTMxMjUiIHN0b3AtY29sb3I9InJnYig5Ny41MTEyOTIlLCA2NS43OTEzMjElLCAyNS45Mjc3MzQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40NjA5MzgiIHN0b3AtY29sb3I9InJnYig5Ny41MDIxMzYlLCA2NS40NTQxMDIlLCAyNS43MTcxNjMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40Njg3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjQ5Mjk4MSUsIDY1LjExODQwOCUsIDI1LjUwNjU5MiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjQ3NjU2MiIgc3RvcC1jb2xvcj0icmdiKDk3LjQ4MzgyNiUsIDY0Ljc4MjcxNSUsIDI1LjI5NjAyMSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjQ4NDM3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjQ3NDY3JSwgNjQuNDQ3MDIxJSwgMjUuMDg1NDQ5JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNDkyMTg4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNDY1NTE1JSwgNjQuMTExMzI4JSwgMjQuODc0ODc4JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNSIgc3RvcC1jb2xvcj0icmdiKDk3LjQ1NjM2JSwgNjMuNzc1NjM1JSwgMjQuNjY0MzA3JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNTA3ODEyIiBzdG9wLWNvbG9yPSJyZ2IoOTcuNDQ3MjA1JSwgNjMuNDM5OTQxJSwgMjQuNDUzNzM1JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNTE1NjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNDM4MDQ5JSwgNjMuMTA0MjQ4JSwgMjQuMjQzMTY0JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNTIzNDM4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNDI4ODk0JSwgNjIuNzY4NTU1JSwgMjQuMDMyNTkzJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNTMxMjUiIHN0b3AtY29sb3I9InJnYig5Ny40MTk3MzklLCA2Mi40MzI4NjElLCAyMy44MjIwMjElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC41MzkwNjIiIHN0b3AtY29sb3I9InJnYig5Ny40MTA1ODMlLCA2Mi4wOTcxNjglLCAyMy42MTE0NSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjU0Njg3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjQwMTQyOCUsIDYxLjc2MTQ3NSUsIDIzLjQwMDg3OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjU1NDY4NyIgc3RvcC1jb2xvcj0icmdiKDk3LjM5MjI3MyUsIDYxLjQyNTc4MSUsIDIzLjE5MDMwOCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjU2MjUiIHN0b3AtY29sb3I9InJnYig5Ny4zODMxMTglLCA2MS4wOTAwODglLCAyMi45Nzk3MzYlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC41NzAzMTIiIHN0b3AtY29sb3I9InJnYig5Ny4zNzM5NjIlLCA2MC43NTQzOTUlLCAyMi43NjkxNjUlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC41NzgxMjUiIHN0b3AtY29sb3I9InJnYig5Ny4zNjQ4MDclLCA2MC40MTg3MDElLCAyMi41NTg1OTQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC41ODU5MzgiIHN0b3AtY29sb3I9InJnYig5Ny4zNTU2NTIlLCA2MC4wODMwMDglLCAyMi4zNDgwMjIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC41OTM3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjM0NjQ5NyUsIDU5Ljc0NzMxNCUsIDIyLjEzNzQ1MSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjYwMTU2MiIgc3RvcC1jb2xvcj0icmdiKDk3LjMzNzM0MSUsIDU5LjQxMTYyMSUsIDIxLjkyNjg4JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNjA5Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMzI4MTg2JSwgNTkuMDc1OTI4JSwgMjEuNzE2MzA5JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNjE3MTg4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMzE5MDMxJSwgNTguNzQwMjM0JSwgMjEuNTA0MjExJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMzA5ODc1JSwgNTguNDA0NTQxJSwgMjEuMjkzNjQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42MzI4MTIiIHN0b3AtY29sb3I9InJnYig5Ny4zMDA3MiUsIDU4LjA2NzMyMiUsIDIxLjA4MzA2OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjY0MDYyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjI5MTU2NSUsIDU3LjczMTYyOCUsIDIwLjg3MjQ5OCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjY0ODQzOCIgc3RvcC1jb2xvcj0icmdiKDk3LjI4MjQxJSwgNTcuMzk1OTM1JSwgMjAuNjYxOTI2JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNjU2MjUiIHN0b3AtY29sb3I9InJnYig5Ny4yNzMyNTQlLCA1Ny4wNjAyNDIlLCAyMC40NTEzNTUlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42NjQwNjIiIHN0b3AtY29sb3I9InJnYig5Ny4yNjQwOTklLCA1Ni43MjQ1NDglLCAyMC4yNDA3ODQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42NzE4NzUiIHN0b3AtY29sb3I9InJnYig5Ny4yNTQ5NDQlLCA1Ni4zODg4NTUlLCAyMC4wMzAyMTIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42Nzk2ODgiIHN0b3AtY29sb3I9InJnYig5Ny4yNDU3ODklLCA1Ni4wNTMxNjIlLCAxOS44MTk2NDElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42ODc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMjM2NjMzJSwgNTUuNzE3NDY4JSwgMTkuNjA5MDclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42OTUzMTIiIHN0b3AtY29sb3I9InJnYig5Ny4yMjc0NzglLCA1NS4zODE3NzUlLCAxOS4zOTg0OTklKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC43MDMxMjUiIHN0b3AtY29sb3I9InJnYig5Ny4yMTgzMjMlLCA1NS4wNDYwODIlLCAxOS4xODc5MjclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC43MTA5MzgiIHN0b3AtY29sb3I9InJnYig5Ny4yMDkxNjclLCA1NC43MTAzODglLCAxOC45NzczNTYlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC43MTg3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjIwMDAxMiUsIDU0LjM3NDY5NSUsIDE4Ljc2Njc4NSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjcyNjU2MiIgc3RvcC1jb2xvcj0icmdiKDk3LjE5MDg1NyUsIDU0LjAzOTAwMSUsIDE4LjU1NjIxMyUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjczNDM3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjE4MTcwMiUsIDUzLjcwMzMwOCUsIDE4LjM0NTY0MiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc0MjE4OCIgc3RvcC1jb2xvcj0icmdiKDk3LjE3MjU0NiUsIDUzLjM2NzYxNSUsIDE4LjEzNTA3MSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMTYzMzkxJSwgNTMuMDMxOTIxJSwgMTcuOTI0NSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc1NzgxMyIgc3RvcC1jb2xvcj0icmdiKDk3LjE1NDIzNiUsIDUyLjY5NjIyOCUsIDE3LjcxMzkyOCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc2NTYyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjE0NTA4MSUsIDUyLjM2MDUzNSUsIDE3LjUwMzM1NyUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc3MzQzOCIgc3RvcC1jb2xvcj0icmdiKDk3LjEzNTkyNSUsIDUyLjAyNDg0MSUsIDE3LjI5Mjc4NiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc4MTI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMTI2NzclLCA1MS42ODkxNDglLCAxNy4wODIyMTQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC43ODkwNjIiIHN0b3AtY29sb3I9InJnYig5Ny4xMTc2MTUlLCA1MS4zNTM0NTUlLCAxNi44NzE2NDMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC43OTY4NzUiIHN0b3AtY29sb3I9InJnYig5Ny4xMDg0NTklLCA1MS4wMTYyMzUlLCAxNi42NjEwNzIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC44MDQ2ODgiIHN0b3AtY29sb3I9InJnYig5Ny4wOTkzMDQlLCA1MC42ODA1NDIlLCAxNi40NTA1JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuODEyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjA5MDE0OSUsIDUwLjM0NDg0OSUsIDE2LjIzOTkyOSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjgyMDMxMyIgc3RvcC1jb2xvcj0icmdiKDk3LjA4MDk5NCUsIDUwLjAwOTE1NSUsIDE2LjAyOTM1OCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjgyODEyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjA3MTgzOCUsIDQ5LjY3MzQ2MiUsIDE1LjgxODc4NyUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjgzNTkzOCIgc3RvcC1jb2xvcj0icmdiKDk3LjA2MjY4MyUsIDQ5LjMzNzc2OSUsIDE1LjYwODIxNSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjg0Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMDUzNTI4JSwgNDkuMDAyMDc1JSwgMTUuMzk3NjQ0JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuODUxNTYyIiBzdG9wLWNvbG9yPSJyZ2IoOTcuMDQ0MzczJSwgNDguNjY2MzgyJSwgMTUuMTg3MDczJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuODU5Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMDM1MjE3JSwgNDguMzMwNjg4JSwgMTQuOTc2NTAxJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuODY3MTg4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMDI2MDYyJSwgNDcuOTk0OTk1JSwgMTQuNzY1OTMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC44NzUiIHN0b3AtY29sb3I9InJnYig5Ny4wMTY5MDclLCA0Ny42NTkzMDIlLCAxNC41NTUzNTklKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC44ODI4MTMiIHN0b3AtY29sb3I9InJnYig5Ny4wMDc3NTElLCA0Ny4zMjM2MDglLCAxNC4zNDQ3ODglKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC44OTA2MjUiIHN0b3AtY29sb3I9InJnYig5Ni45OTg1OTYlLCA0Ni45ODc5MTUlLCAxNC4xMzI2OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjg5ODQzOCIgc3RvcC1jb2xvcj0icmdiKDk2Ljk4OTQ0MSUsIDQ2LjY1MjIyMiUsIDEzLjkyMjExOSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjkwNjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTYuOTgwMjg2JSwgNDYuMzE2NTI4JSwgMTMuNzExNTQ4JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuOTE0MDYyIiBzdG9wLWNvbG9yPSJyZ2IoOTYuOTcxMTMlLCA0NS45ODA4MzUlLCAxMy41MDA5NzclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC45MjE4NzUiIHN0b3AtY29sb3I9InJnYig5Ni45NjE5NzUlLCA0NS42NDUxNDIlLCAxMy4yOTA0MDUlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC45Mjk2ODgiIHN0b3AtY29sb3I9InJnYig5Ni45NTI4MiUsIDQ1LjMwOTQ0OCUsIDEzLjA3OTgzNCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjkzNzUiIHN0b3AtY29sb3I9InJnYig5Ni45NDM2NjUlLCA0NC45NzM3NTUlLCAxMi44NjkyNjMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC45NDUzMTMiIHN0b3AtY29sb3I9InJnYig5Ni45MzQ1MDklLCA0NC42MzgwNjIlLCAxMi42NTg2OTElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC45NTMxMjUiIHN0b3AtY29sb3I9InJnYig5Ni45MjUzNTQlLCA0NC4zMDIzNjglLCAxMi40NDgxMiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjk2MDkzOCIgc3RvcC1jb2xvcj0icmdiKDk2LjkxNjE5OSUsIDQzLjk2NjY3NSUsIDEyLjIzNzU0OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjk2ODc1IiBzdG9wLWNvbG9yPSJyZ2IoOTYuOTA3MDQzJSwgNDMuNjI5NDU2JSwgMTIuMDI2OTc4JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuOTc2NTYyIiBzdG9wLWNvbG9yPSJyZ2IoOTYuODk3ODg4JSwgNDMuMjkzNzYyJSwgMTEuODE2NDA2JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuOTg0Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTYuODg4NzMzJSwgNDIuOTU4MDY5JSwgMTEuNjA1ODM1JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuOTkyMTg4IiBzdG9wLWNvbG9yPSJyZ2IoOTYuODc5NTc4JSwgNDIuNjIyMzc1JSwgMTEuMzk1MjY0JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9InJnYig5Ni44NzA0MjIlLCA0Mi4yODY2ODIlLCAxMS4xODQ2OTIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAtMCkiPgo8ZyBjbGlwLXBhdGg9InVybCgjY2xpcC0xKSI+CjxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZmlsbD0idXJsKCNsaW5lYXItcGF0dGVybi0wKSIgZD0iTSA1MTYuNjg3NSAyNDEuNzMwNDY5IEwgNTE2LjY4NzUgNDA3LjExMzI4MSBMIDM1Ni40NjA5MzggNDA3LjExMzI4MSBMIDM1Ni40NjA5MzggMjQxLjczMDQ2OSBaIE0gNTE2LjY4NzUgMjQxLjczMDQ2OSAiLz4KPC9nPgo8L2c+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgZmlsbD0icmdiKDIzLjEzNjkwMiUsIDYxLjU2NzY4OCUsIDg3LjA1NzQ5NSUpIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gNTgwLjAzNTE1NiAzMjEuNDE0MDYyIEMgNTY3LjA1NDY4OCAzMjEuNDE0MDYyIDU1Ni41MzEyNSAzMzEuOTM3NSA1NTYuNTMxMjUgMzQ0LjkxNzk2OSBDIDU1Ni41MzEyNSAzNTcuODk0NTMxIDU2Ny4wNTQ2ODggMzY4LjQxNzk2OSA1ODAuMDM1MTU2IDM2OC40MTc5NjkgQyA1OTMuMDE1NjI1IDM2OC40MTc5NjkgNjAzLjUzOTA2MiAzNTcuODk0NTMxIDYwMy41MzkwNjIgMzQ0LjkxNzk2OSBDIDYwMy41MzkwNjIgMzMxLjkzNzUgNTkzLjAxNTYyNSAzMjEuNDE0MDYyIDU4MC4wMzUxNTYgMzIxLjQxNDA2MiBaIE0gNTIxLjg1MTU2MiAyMDMuMDM1MTU2IEMgNDg4Ljc0MjE4OCAyMDMuMDM1MTU2IDQ2MS42NTYyNSAyMzAuMTIxMDk0IDQ2MS42NTYyNSAyNjMuMjI2NTYyIEwgNDYxLjY1NjI1IDI4Ni43MzA0NjkgTCA1MDcuNTE5NTMxIDI4Ni43MzA0NjkgQyA1MTIuNTYyNSAyODYuNzMwNDY5IDUxNi42ODc1IDI5MC44NTkzNzUgNTE2LjY4NzUgMjk1LjkwMjM0NCBDIDUxNi42ODc1IDMwMC45NDkyMTkgNTEyLjU2MjUgMzA1LjA3NDIxOSA1MDcuNTE5NTMxIDMwNS4wNzQyMTkgTCA0NTIuNDg0Mzc1IDMwNS4wNzQyMTkgQyA0NDcuNDM3NSAzMDUuMDc0MjE5IDQ0My4zMTI1IDMwOS4xOTkyMTkgNDQzLjMxMjUgMzE0LjI0NjA5NCBDIDQ0My4zMTI1IDMxOS4yOTI5NjkgNDQ3LjQzNzUgMzIzLjQyMTg3NSA0NTIuNDg0Mzc1IDMyMy40MjE4NzUgTCA1MjEuODUxNTYyIDMyMy40MjE4NzUgQyA1NTQuOTUzMTI1IDMyMy40MjE4NzUgNTgyLjA0Mjk2OSAyOTYuMzMyMDMxIDU4Mi4wNDI5NjkgMjYzLjIyNjU2MiBDIDU4Mi4wNDI5NjkgMjMwLjEyMTA5NCA1NTQuOTUzMTI1IDIwMy4wMzUxNTYgNTIxLjg1MTU2MiAyMDMuMDM1MTU2IFogTSA1NTguNDQ5MjE5IDI0OS4xNzk2ODggQyA1NTkuMTk5MjE5IDI1MS4xNDA2MjUgNTYxLjM5ODQzOCAyNTIuMTI1IDU2My4zNjMyODEgMjUxLjM3NSBDIDU2NS4zMjQyMTkgMjUwLjYyMTA5NCA1NjYuMzA0Njg4IDI0OC40MjE4NzUgNTY1LjU1NDY4OCAyNDYuNDY0ODQ0IEMgNTYyLjEzNjcxOSAyMzcuNTU0Njg4IDU1Ni4wNjY0MDYgMjI5Ljk1MzEyNSA1NDguMzE2NDA2IDIyNC42MzI4MTIgQyA1NDAuNzczNDM4IDIxOS40NDUzMTIgNTMxLjY1MjM0NCAyMTYuNDEwMTU2IDUyMS44NTE1NjIgMjE2LjQxMDE1NiBDIDUxOS43MzgyODEgMjE2LjQxMDE1NiA1MTguMDI3MzQ0IDIxOC4xMjEwOTQgNTE4LjAyNzM0NCAyMjAuMjM0Mzc1IEMgNTE4LjAyNzM0NCAyMjIuMzQzNzUgNTE5LjczODI4MSAyMjQuMDU0Njg4IDUyMS44NTE1NjIgMjI0LjA1NDY4OCBDIDUzMC4wOTc2NTYgMjI0LjA1NDY4OCA1MzcuNzM0Mzc1IDIyNi41ODIwMzEgNTQ0LjAxOTUzMSAyMzAuOTAyMzQ0IEMgNTUwLjUwMzkwNiAyMzUuMzU1NDY5IDU1NS41ODU5MzggMjQxLjcxODc1IDU1OC40NDkyMTkgMjQ5LjE3OTY4OCBaIE0gNTYwLjcyMjY1NiAyNjguMTk5MjE5IEMgNTYwLjQ2MDkzOCAyNzAuMjg1MTU2IDU2MS45NDE0MDYgMjcyLjE4NzUgNTY0LjAyNzM0NCAyNzIuNDUzMTI1IEMgNTY2LjEwOTM3NSAyNzIuNzE0ODQ0IDU2OC4wMTU2MjUgMjcxLjIzODI4MSA1NjguMjc3MzQ0IDI2OS4xNTIzNDQgQyA1NjguNDEwMTU2IDI2OC4xMDE1NjIgNTY4LjUwNzgxMiAyNjcuMTE3MTg4IDU2OC41NjY0MDYgMjY2LjE5OTIxOSBDIDU2OC42MzI4MTIgMjY1LjEzNjcxOSA1NjguNjY3OTY5IDI2NC4xNDQ1MzEgNTY4LjY2Nzk2OSAyNjMuMjI2NTYyIEMgNTY4LjY2Nzk2OSAyNjEuMTE3MTg4IDU2Ni45NTMxMjUgMjU5LjQwNjI1IDU2NC44NDM3NSAyNTkuNDA2MjUgQyA1NjIuNzM0Mzc1IDI1OS40MDYyNSA1NjEuMDIzNDM4IDI2MS4xMTcxODggNTYxLjAyMzQzOCAyNjMuMjI2NTYyIEMgNTYxLjAyMzQzOCAyNjQuMTQ0NTMxIDU2MSAyNjQuOTc2NTYyIDU2MC45NTMxMjUgMjY1LjcyMjY1NiBDIDU2MC44OTQ1MzEgMjY2LjYyODkwNiA1NjAuODIwMzEyIDI2Ny40NTcwMzEgNTYwLjcyMjY1NiAyNjguMTk5MjE5IFogTSA1NjAuNzIyNjU2IDI2OC4xOTkyMTkgIi8+CjxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZmlsbD0icmdiKDIzLjEzNjkwMiUsIDYxLjU2NzY4OCUsIDg3LjA1NzQ5NSUpIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gNDE0Ljk1NzAzMSA0OTUuNjY3OTY5IEwgMzk4LjQyOTY4OCA0NTYuNDY0ODQ0IEMgMzk2LjUyNzM0NCA0NTEuNzIyNjU2IDM5MC4xNzE4NzUgNDUxLjc5Mjk2OSAzODguMjY5NTMxIDQ1Ni40NjQ4NDQgTCAzNzEuNzQyMTg4IDQ5NS42Njc5NjkgQyAzNzEuNTQyOTY5IDQ5Ni4xNDQ1MzEgMzcxLjQxNDA2MiA0OTYuNjkxNDA2IDM3MS40MTQwNjIgNDk3LjI5Njg3NSBDIDM3MS40MTQwNjIgNDk5LjUzMTI1IDM3My4yNDIxODggNTAxLjM1OTM3NSAzNzUuNDc2NTYyIDUwMS4zNTkzNzUgQyAzNzcuMTA1NDY5IDUwMS4zNTkzNzUgMzc4LjU4NTkzOCA1MDAuMzUxNTYyIDM3OS4xOTE0MDYgNDk4Ljk4NDM3NSBMIDM4MS4yMjI2NTYgNDk0LjE4MzU5NCBDIDM4MS42OTkyMTkgNDkyLjk2MDkzOCAzODMuMzI4MTI1IDQ5MS44Nzg5MDYgMzg0LjY4MzU5NCA0OTEuODc4OTA2IEwgNDAyLjAxNTYyNSA0OTEuODc4OTA2IEMgNDAzLjM3MTA5NCA0OTEuODc4OTA2IDQwNSA0OTIuOTYwOTM4IDQwNS40NzI2NTYgNDk0LjE4MzU5NCBMIDQwNy41MDc4MTIgNDk4Ljk4NDM3NSBDIDQwOC4xODM1OTQgNTAwLjQxMDE1NiA0MDkuNjA5Mzc1IDUwMS4zNTkzNzUgNDExLjIyMjY1NiA1MDEuMzU5Mzc1IEMgNDEzLjM5ODQzOCA1MDEuMzU5Mzc1IDQxNS4yODUxNTYgNDk5LjUzMTI1IDQxNS4yODUxNTYgNDk3LjI5Njg3NSBDIDQxNS4yODUxNTYgNDk2Ljc1IDQxNS4xNTYyNSA0OTYuMTQ0NTMxIDQxNC45NTcwMzEgNDk1LjY2Nzk2OSBaIE0gMzg2LjU4NTkzOCA0ODEuNDQ5MjE5IEwgMzkyLjQwNjI1IDQ2Ny43MDMxMjUgQyAzOTIuODgyODEyIDQ2Ni40OTIxODggMzkzLjgzMjAzMSA0NjYuNDkyMTg4IDM5NC4yOTI5NjkgNDY3LjcwMzEyNSBMIDQwMC4xMjg5MDYgNDgxLjQ0OTIxOSBDIDQwMC41ODk4NDQgNDgyLjY3MTg3NSAzOTkuOTI1NzgxIDQ4My43NTM5MDYgMzk4LjU1ODU5NCA0ODMuNzUzOTA2IEwgMzg4LjE0MDYyNSA0ODMuNzUzOTA2IEMgMzg2Ljc4NTE1NiA0ODMuNzUzOTA2IDM4Ni4xMDkzNzUgNDgyLjY3MTg3NSAzODYuNTg1OTM4IDQ4MS40NDkyMTkgWiBNIDQ3OC4zMzk4NDQgNDk1LjY2Nzk2OSBMIDQ2MS44MTI1IDQ1Ni40NjQ4NDQgQyA0NTkuOTI1NzgxIDQ1MS43MjI2NTYgNDUzLjU1NDY4OCA0NTEuNzkyOTY5IDQ1MS42NTIzNDQgNDU2LjQ2NDg0NCBMIDQzNS4xMjg5MDYgNDk1LjY2Nzk2OSBDIDQzNC45MjU3ODEgNDk2LjE0NDUzMSA0MzQuNzk2ODc1IDQ5Ni42OTE0MDYgNDM0Ljc5Njg3NSA0OTcuMjk2ODc1IEMgNDM0Ljc5Njg3NSA0OTkuNTMxMjUgNDM2LjYyNSA1MDEuMzU5Mzc1IDQzOC44NTkzNzUgNTAxLjM1OTM3NSBDIDQ0MC40ODgyODEgNTAxLjM1OTM3NSA0NDEuOTcyNjU2IDUwMC4zNTE1NjIgNDQyLjU3ODEyNSA0OTguOTg0Mzc1IEwgNDQ0LjYyMTA5NCA0OTQuMTgzNTk0IEMgNDQ1LjA4MjAzMSA0OTIuOTYwOTM4IDQ0Ni43MTA5MzggNDkxLjg3ODkwNiA0NDguMDY2NDA2IDQ5MS44Nzg5MDYgTCA0NjUuMzk4NDM4IDQ5MS44Nzg5MDYgQyA0NjYuNzUzOTA2IDQ5MS44Nzg5MDYgNDY4LjM4MjgxMiA0OTIuOTYwOTM4IDQ2OC44NTkzNzUgNDk0LjE4MzU5NCBMIDQ3MC44OTA2MjUgNDk4Ljk4NDM3NSBDIDQ3MS41NjY0MDYgNTAwLjQxMDE1NiA0NzIuOTkyMTg4IDUwMS4zNTkzNzUgNDc0LjYyMTA5NCA1MDEuMzU5Mzc1IEMgNDc2Ljc4MTI1IDUwMS4zNTkzNzUgNDc4LjY4MzU5NCA0OTkuNTMxMjUgNDc4LjY4MzU5NCA0OTcuMjk2ODc1IEMgNDc4LjY4MzU5NCA0OTYuNzUgNDc4LjUzOTA2MiA0OTYuMTQ0NTMxIDQ3OC4zMzk4NDQgNDk1LjY2Nzk2OSBaIE0gNDQ5Ljk2ODc1IDQ4MS40NDkyMTkgTCA0NTUuNzg5MDYyIDQ2Ny43MDMxMjUgQyA0NTYuMjY1NjI1IDQ2Ni40OTIxODggNDU3LjIxNDg0NCA0NjYuNDkyMTg4IDQ1Ny42OTE0MDYgNDY3LjcwMzEyNSBMIDQ2My41MTE3MTkgNDgxLjQ0OTIxOSBDIDQ2My45ODgyODEgNDgyLjY3MTg3NSA0NjMuMzEyNSA0ODMuNzUzOTA2IDQ2MS45NTcwMzEgNDgzLjc1MzkwNiBMIDQ1MS41MjM0MzggNDgzLjc1MzkwNiBDIDQ1MC4xNjc5NjkgNDgzLjc1MzkwNiA0NDkuNDkyMTg4IDQ4Mi42NzE4NzUgNDQ5Ljk2ODc1IDQ4MS40NDkyMTkgWiBNIDU0MS43MjI2NTYgNDk1LjY2Nzk2OSBMIDUyNS4yMTA5MzggNDU2LjQ2NDg0NCBDIDUyMy4zMDg1OTQgNDUxLjcyMjY1NiA1MTYuOTQxNDA2IDQ1MS43OTI5NjkgNTE1LjA1MDc4MSA0NTYuNDY0ODQ0IEwgNDk4LjUyMzQzOCA0OTUuNjY3OTY5IEMgNDk4LjMyNDIxOSA0OTYuMTQ0NTMxIDQ5OC4xNzk2ODggNDk2LjY5MTQwNiA0OTguMTc5Njg4IDQ5Ny4yOTY4NzUgQyA0OTguMTc5Njg4IDQ5OS41MzEyNSA1MDAuMDA3ODEyIDUwMS4zNTkzNzUgNTAyLjI0MjE4OCA1MDEuMzU5Mzc1IEMgNTAzLjg3MTA5NCA1MDEuMzU5Mzc1IDUwNS4zNTU0NjkgNTAwLjM1MTU2MiA1MDUuOTc2NTYyIDQ5OC45ODQzNzUgTCA1MDguMDA3ODEyIDQ5NC4xODM1OTQgQyA1MDguNDgwNDY5IDQ5Mi45NjA5MzggNTEwLjA5Mzc1IDQ5MS44Nzg5MDYgNTExLjQ0OTIxOSA0OTEuODc4OTA2IEwgNTI4Ljc5Njg3NSA0OTEuODc4OTA2IEMgNTMwLjE1MjM0NCA0OTEuODc4OTA2IDUzMS43NjU2MjUgNDkyLjk2MDkzOCA1MzIuMjQyMTg4IDQ5NC4xODM1OTQgTCA1MzQuMjczNDM4IDQ5OC45ODQzNzUgQyA1MzQuOTQ5MjE5IDUwMC40MTAxNTYgNTM2LjM3NSA1MDEuMzU5Mzc1IDUzOC4wMDM5MDYgNTAxLjM1OTM3NSBDIDU0MC4xNjc5NjkgNTAxLjM1OTM3NSA1NDIuMDY2NDA2IDQ5OS41MzEyNSA1NDIuMDY2NDA2IDQ5Ny4yOTY4NzUgQyA1NDIuMDY2NDA2IDQ5Ni43NSA1NDEuOTI1NzgxIDQ5Ni4xNDQ1MzEgNTQxLjcyMjY1NiA0OTUuNjY3OTY5IFogTSA1MTMuMzUxNTYyIDQ4MS40NDkyMTkgTCA1MTkuMTcxODc1IDQ2Ny43MDMxMjUgQyA1MTkuNjQ4NDM4IDQ2Ni40OTIxODggNTIwLjU5NzY1NiA0NjYuNDkyMTg4IDUyMS4wNzQyMTkgNDY3LjcwMzEyNSBMIDUyNi44OTQ1MzEgNDgxLjQ0OTIxOSBDIDUyNy4zNzEwOTQgNDgyLjY3MTg3NSA1MjYuNjk1MzEyIDQ4My43NTM5MDYgNTI1LjMzOTg0NCA0ODMuNzUzOTA2IEwgNTE0LjkwNjI1IDQ4My43NTM5MDYgQyA1MTMuNTU0Njg4IDQ4My43NTM5MDYgNTEyLjg3NSA0ODIuNjcxODc1IDUxMy4zNTE1NjIgNDgxLjQ0OTIxOSBaIE0gNTYwLjAwNzgxMiA0OTQuMDQyOTY5IEMgNTY0LjA3MDMxMiA0OTguMzA0Njg4IDU2OS40Mjk2ODggNTAxLjAxNTYyNSA1NzUuNTIzNDM4IDUwMS4wMTU2MjUgQyA1ODQuNTg5ODQ0IDUwMS4wMTU2MjUgNTkxLjQzMzU5NCA0OTQuNTg5ODQ0IDU5MS40MzM1OTQgNDg3Ljk0NTMxMiBDIDU5MS40MzM1OTQgNDc4Ljk0MTQwNiA1ODMuMjM0Mzc1IDQ3NC44MjAzMTIgNTc2LjY3OTY4OCA0NzIuMzEyNSBDIDU3MC45ODgyODEgNDcwLjEzNjcxOSA1NjcuNzMwNDY5IDQ2OC40NTMxMjUgNTY3LjczMDQ2OSA0NjYuMDE1NjI1IEMgNTY3LjczMDQ2OSA0NjMuOTE0MDYyIDU3MC4zNjcxODggNDYxLjA1ODU5NCA1NzUuMzI0MjE5IDQ2MS4wNTg1OTQgQyA1NzguODM5ODQ0IDQ2MS4wNTg1OTQgNTgxLjIwMzEyNSA0NjIuMjg1MTU2IDU4Mi45NzI2NTYgNDY0LjMxNjQwNiBDIDU4My43ODEyNSA0NjUuMTk1MzEyIDU4NC43ODkwNjIgNDY1LjY3MTg3NSA1ODYuMDE1NjI1IDQ2NS42NzE4NzUgQyA1ODguMjQ2MDk0IDQ2NS42NzE4NzUgNTkwLjA3ODEyNSA0NjMuODM5ODQ0IDU5MC4wNzgxMjUgNDYxLjYwNTQ2OSBDIDU5MC4wNzgxMjUgNDYwLjU5NzY1NiA1ODkuNjc1NzgxIDQ1OS41NzQyMTkgNTg5LjA3MDMxMiA0NTguODk4NDM4IEMgNTg2LjA4NTkzOCA0NTUuNTg1OTM4IDU4MS42MjEwOTQgNDUyLjk0OTIxOSA1NzUuMzI0MjE5IDQ1Mi45NDkyMTkgQyA1NjUuNjI1IDQ1Mi45NDkyMTkgNTU5LjYwNTQ2OSA0NTkuNTAzOTA2IDU1OS42MDU0NjkgNDY2LjAxNTYyNSBDIDU1OS42MDU0NjkgNDczLjQ2NDg0NCA1NjYuMTAxNTYyIDQ3Ni45ODA0NjkgNTczLjgyNDIxOSA0NzkuODkwNjI1IEMgNTc5LjMxNjQwNiA0ODEuOTk2MDk0IDU4My4zMDQ2ODggNDg0LjIzMDQ2OSA1ODMuMzA0Njg4IDQ4Ny45NDUzMTIgQyA1ODMuMzA0Njg4IDQ4OS45MjE4NzUgNTgwLjI2NTYyNSA0OTIuODg2NzE5IDU3NS41MjM0MzggNDkyLjg4NjcxOSBDIDU3MS44NjcxODggNDkyLjg4NjcxOSA1NjguNjA5Mzc1IDQ5MS4zMzIwMzEgNTY1LjgyODEyNSA0ODguNDIxODc1IEMgNTY1LjA5Mzc1IDQ4Ny42MTMyODEgNTY0LjA3MDMxMiA0ODcuMjEwOTM4IDU2Mi45MTc5NjkgNDg3LjIxMDkzOCBDIDU2MC43NTc4MTIgNDg3LjIxMDkzOCA1NTguODU1NDY5IDQ4OS4wNDI5NjkgNTU4Ljg1NTQ2OSA0OTEuMjczNDM4IEMgNTU4Ljg1NTQ2OSA0OTIuMjgxMjUgNTU5LjMyODEyNSA0OTMuMzYzMjgxIDU2MC4wMDc4MTIgNDk0LjA0Mjk2OSBaIE0gNTYwLjAwNzgxMiA0OTQuMDQyOTY5ICIvPgo8L3N2Zz4K" alt="Logo AAAS">
+    <div class="nm">
+      <h1>Sëtal <span>AAAS</span></h1>
+      <div class="tag">La vidange au juste prix, par les professionnels de l'Association des Acteurs de l'Assainissement du Sénégal</div>
+    </div>
+    <div class="grow"></div>
+    <span class="proto" id="mode">Simulation sur cet appareil</span>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Espaces"></nav>
+  <main id="view"></main>
+  <p class="foot-note">Prototype de démonstration préparé pour l'AAAS. Noms, chiffres, distances et tarifs sont des exemples paramétrables, à valider avec le bureau de l'association et l'ONAS. Contact AAAS : +221 33 867 16 95 · Maristes lot N°R22, Dakar.</p>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+const LOGO="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIzNDUgMTkwIDI3MCAyMjUiPgo8ZGVmcz4KPGNsaXBQYXRoIGlkPSJjbGlwLTAiPgo8cGF0aCBjbGlwLXJ1bGU9Im5vbnplcm8iIGQ9Ik0gMzU2IDI0MSBMIDUxNyAyNDEgTCA1MTcgNDA4IEwgMzU2IDQwOCBaIE0gMzU2IDI0MSAiLz4KPC9jbGlwUGF0aD4KPGNsaXBQYXRoIGlkPSJjbGlwLTEiPgo8cGF0aCBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0gNDM4LjE0ODQzOCA0MDcuMTEzMjgxIEMgNDcxLjI1NzgxMiA0MDcuMTEzMjgxIDQ5OC4zNDM3NSAzODAuMDI3MzQ0IDQ5OC4zNDM3NSAzNDYuOTIxODc1IEwgNDk4LjM0Mzc1IDMwNS4wNzQyMTkgTCA1MDcuNTE5NTMxIDMwNS4wNzQyMTkgQyA1MTIuNTYyNSAzMDUuMDc0MjE5IDUxNi42ODc1IDMwMC45NDkyMTkgNTE2LjY4NzUgMjk1LjkwMjM0NCBDIDUxNi42ODc1IDI5MC44NTkzNzUgNTEyLjU2MjUgMjg2LjczMDQ2OSA1MDcuNTE5NTMxIDI4Ni43MzA0NjkgTCA0MzguMTQ4NDM4IDI4Ni43MzA0NjkgQyA0MDUuMDQ2ODc1IDI4Ni43MzA0NjkgMzc3Ljk2MDkzOCAzMTMuODE2NDA2IDM3Ny45NjA5MzggMzQ2LjkyMTg3NSBDIDM3Ny45NjA5MzggMzgwLjAyNzM0NCA0MDUuMDQ2ODc1IDQwNy4xMTMyODEgNDM4LjE0ODQzOCA0MDcuMTEzMjgxIFogTSAzNzkuOTY4NzUgMjQxLjczMDQ2OSBDIDM2Ni45ODQzNzUgMjQxLjczMDQ2OSAzNTYuNDYwOTM4IDI1Mi4yNTM5MDYgMzU2LjQ2MDkzOCAyNjUuMjMwNDY5IEMgMzU2LjQ2MDkzOCAyNzguMjE0ODQ0IDM2Ni45ODQzNzUgMjg4LjczNDM3NSAzNzkuOTY4NzUgMjg4LjczNDM3NSBDIDM5Mi45NDkyMTkgMjg4LjczNDM3NSA0MDMuNDcyNjU2IDI3OC4yMTQ4NDQgNDAzLjQ3MjY1NiAyNjUuMjMwNDY5IEMgNDAzLjQ3MjY1NiAyNTIuMjUzOTA2IDM5Mi45NDkyMTkgMjQxLjczMDQ2OSAzNzkuOTY4NzUgMjQxLjczMDQ2OSBaIE0gNDAxLjU1NDY4OCAzNjAuOTY4NzUgQyA0MDAuODA0Njg4IDM1OS4wMDc4MTIgMzk4LjYwNTQ2OSAzNTguMDIzNDM4IDM5Ni42NDA2MjUgMzU4Ljc3NzM0NCBDIDM5NC42Nzk2ODggMzU5LjUyMzQzOCAzOTMuNjk5MjE5IDM2MS43MjI2NTYgMzk0LjQ0OTIxOSAzNjMuNjg3NSBDIDM5Ny44NjMyODEgMzcyLjU5NzY1NiA0MDMuOTMzNTk0IDM4MC4xOTUzMTIgNDExLjY4MzU5NCAzODUuNTIzNDM4IEMgNDE5LjIzMDQ2OSAzOTAuNzEwOTM4IDQyOC4zNDc2NTYgMzkzLjc0MjE4OCA0MzguMTQ4NDM4IDM5My43NDIxODggQyA0NDAuMjYxNzE5IDM5My43NDIxODggNDQxLjk3NjU2MiAzOTIuMDMxMjUgNDQxLjk3NjU2MiAzODkuOTIxODc1IEMgNDQxLjk3NjU2MiAzODcuODA4NTk0IDQ0MC4yNjE3MTkgMzg2LjEwMTU2MiA0MzguMTQ4NDM4IDM4Ni4xMDE1NjIgQyA0MjkuOTA2MjUgMzg2LjEwMTU2MiA0MjIuMjY5NTMxIDM4My41NjY0MDYgNDE1Ljk4MDQ2OSAzNzkuMjQ2MDk0IEMgNDA5LjQ5NjA5NCAzNzQuNzg5MDYyIDQwNC40MTc5NjkgMzY4LjQyNTc4MSA0MDEuNTU0Njg4IDM2MC45Njg3NSBaIE0gMzk5LjI3NzM0NCAzNDEuOTUzMTI1IEMgMzk5LjUzOTA2MiAzMzkuODY3MTg4IDM5OC4wNjI1IDMzNy45NTcwMzEgMzk1Ljk3NjU2MiAzMzcuNjk1MzEyIEMgMzkzLjg5MDYyNSAzMzcuNDMzNTk0IDM5MS45ODQzNzUgMzM4LjkxNDA2MiAzOTEuNzIyNjU2IDM0MSBDIDM5MS41ODk4NDQgMzQyLjA1MDc4MSAzOTEuNDk2MDk0IDM0My4wMzEyNSAzOTEuNDM3NSAzNDMuOTUzMTI1IEMgMzkxLjM2NzE4OCAzNDUuMDExNzE5IDM5MS4zMzU5MzggMzQ2LjAwMzkwNiAzOTEuMzM1OTM4IDM0Ni45MjE4NzUgQyAzOTEuMzM1OTM4IDM0OS4wMzUxNTYgMzkzLjA0Njg3NSAzNTAuNzQyMTg4IDM5NS4xNTYyNSAzNTAuNzQyMTg4IEMgMzk3LjI2OTUzMSAzNTAuNzQyMTg4IDM5OC45NzY1NjIgMzQ5LjAzNTE1NiAzOTguOTc2NTYyIDM0Ni45MjE4NzUgQyAzOTguOTc2NTYyIDM0Ni4wMDM5MDYgMzk5LjAwMzkwNiAzNDUuMTcxODc1IDM5OS4wNTA3ODEgMzQ0LjQyNTc4MSBDIDM5OS4xMDU0NjkgMzQzLjUyMzQzOCAzOTkuMTgzNTk0IDM0Mi42OTE0MDYgMzk5LjI3NzM0NCAzNDEuOTUzMTI1IFogTSAzOTkuMjc3MzQ0IDM0MS45NTMxMjUgIi8+CjwvY2xpcFBhdGg+CjxsaW5lYXJHcmFkaWVudCBpZD0ibGluZWFyLXBhdHRlcm4tMCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIHgxPSIwIiB5MT0iMC4wMDAyMDA4MjkiIHgyPSIwIiB5Mj0iMzYuODYzMzk2IiBncmFkaWVudFRyYW5zZm9ybT0ibWF0cml4KC00LjQ4NjM5OSwgMCwgMCwgNC40ODYzOTksIDUxNi42ODg1OCwgMjQxLjcyOTA5OSkiPgo8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9InJnYig5OC4wMzc3MiUsIDg1LjA5Njc0MSUsIDM4LjAzODYzNSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjAwNzgxMjUiIHN0b3AtY29sb3I9InJnYig5OC4wMzMxNDIlLCA4NC45Mjg4OTQlLCAzNy45MzMzNSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjAxNTYyNSIgc3RvcC1jb2xvcj0icmdiKDk4LjAyMzk4NyUsIDg0LjU5MzIwMSUsIDM3LjcyMjc3OCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjAyMzQzNzUiIHN0b3AtY29sb3I9InJnYig5OC4wMTQ4MzIlLCA4NC4yNTc1MDclLCAzNy41MTIyMDclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wMzEyNSIgc3RvcC1jb2xvcj0icmdiKDk4LjAwNTY3NiUsIDgzLjkyMTgxNCUsIDM3LjMwMTYzNiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjAzOTA2MjUiIHN0b3AtY29sb3I9InJnYig5Ny45OTY1MjElLCA4My41ODYxMjElLCAzNy4wOTEwNjQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wNDY4NzUiIHN0b3AtY29sb3I9InJnYig5Ny45ODczNjYlLCA4My4yNTA0MjclLCAzNi44ODA0OTMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wNTQ2ODc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuOTc4MjElLCA4Mi45MTQ3MzQlLCAzNi42Njk5MjIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wNjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuOTY5MDU1JSwgODIuNTc5MDQxJSwgMzYuNDU5MzUxJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMDcwMzEyNSIgc3RvcC1jb2xvcj0icmdiKDk3Ljk1OTklLCA4Mi4yNDMzNDclLCAzNi4yNDg3NzklKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wNzgxMjUiIHN0b3AtY29sb3I9InJnYig5Ny45NTA3NDUlLCA4MS45MDc2NTQlLCAzNi4wMzY2ODIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wODU5Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuOTQxNTg5JSwgODEuNTcxOTYlLCAzNS44MjYxMTElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4wOTM3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjkzMjQzNCUsIDgxLjIzNjI2NyUsIDM1LjYxNTU0JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMTAxNTYyIiBzdG9wLWNvbG9yPSJyZ2IoOTcuOTIzMjc5JSwgODAuOTAwNTc0JSwgMzUuNDA0OTY4JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMTA5Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuOTE0MTI0JSwgODAuNTY0ODglLCAzNS4xOTQzOTclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xMTcxODgiIHN0b3AtY29sb3I9InJnYig5Ny45MDQ5NjglLCA4MC4yMjc2NjElLCAzNC45ODM4MjYlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xMjUiIHN0b3AtY29sb3I9InJnYig5Ny44OTU4MTMlLCA3OS44OTE5NjglLCAzNC43NzMyNTQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xMzI4MTMiIHN0b3AtY29sb3I9InJnYig5Ny44ODY2NTglLCA3OS41NTYyNzQlLCAzNC41NjI2ODMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xNDA2MjUiIHN0b3AtY29sb3I9InJnYig5Ny44Nzc1MDIlLCA3OS4yMjA1ODElLCAzNC4zNTIxMTIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xNDg0MzgiIHN0b3AtY29sb3I9InJnYig5Ny44NjgzNDclLCA3OC44ODQ4ODglLCAzNC4xNDE1NDElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xNTYyNSIgc3RvcC1jb2xvcj0icmdiKDk3Ljg1OTE5MiUsIDc4LjU0OTE5NCUsIDMzLjkzMDk2OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjE2NDA2MyIgc3RvcC1jb2xvcj0icmdiKDk3Ljg1MDAzNyUsIDc4LjIxMzUwMSUsIDMzLjcyMDM5OCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjE3MTg3NSIgc3RvcC1jb2xvcj0icmdiKDk3Ljg0MDg4MSUsIDc3Ljg3NzgwOCUsIDMzLjUwOTgyNyUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjE3OTY4OCIgc3RvcC1jb2xvcj0icmdiKDk3LjgzMTcyNiUsIDc3LjU0MjExNCUsIDMzLjI5OTI1NSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjE4NzUiIHN0b3AtY29sb3I9InJnYig5Ny44MjI1NzElLCA3Ny4yMDY0MjElLCAzMy4wODg2ODQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4xOTUzMTMiIHN0b3AtY29sb3I9InJnYig5Ny44MTM0MTYlLCA3Ni44NzA3MjglLCAzMi44NzgxMTMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4yMDMxMjUiIHN0b3AtY29sb3I9InJnYig5Ny44MDQyNiUsIDc2LjUzNTAzNCUsIDMyLjY2NzU0MiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjIxMDkzOCIgc3RvcC1jb2xvcj0icmdiKDk3Ljc5NTEwNSUsIDc2LjE5OTM0MSUsIDMyLjQ1Njk3JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjE4NzUiIHN0b3AtY29sb3I9InJnYig5Ny43ODU5NSUsIDc1Ljg2MzY0NyUsIDMyLjI0NjM5OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjIyNjU2MyIgc3RvcC1jb2xvcj0icmdiKDk3Ljc3Njc5NCUsIDc1LjUyNzk1NCUsIDMyLjAzNTgyOCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjIzNDM3NSIgc3RvcC1jb2xvcj0icmdiKDk3Ljc2NzYzOSUsIDc1LjE5MjI2MSUsIDMxLjgyNTI1NiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjI0MjE4OCIgc3RvcC1jb2xvcj0icmdiKDk3Ljc1ODQ4NCUsIDc0Ljg1NjU2NyUsIDMxLjYxNDY4NSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzQ5MzI5JSwgNzQuNTIwODc0JSwgMzEuNDA0MTE0JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjU3ODEyIiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzQwMTczJSwgNzQuMTg1MTgxJSwgMzEuMTkzNTQyJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjY1NjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzMxMDE4JSwgNzMuODQ5NDg3JSwgMzAuOTgyOTcxJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjczNDM3IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzIxODYzJSwgNzMuNTEzNzk0JSwgMzAuNzcyNCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjI4MTI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzEyNzA4JSwgNzMuMTc4MTAxJSwgMzAuNTYxODI5JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjg5MDYyIiBzdG9wLWNvbG9yPSJyZ2IoOTcuNzAzNTUyJSwgNzIuODQwODgxJSwgMzAuMzUxMjU3JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMjk2ODc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNjk0Mzk3JSwgNzIuNTA1MTg4JSwgMzAuMTQwNjg2JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzA0Njg3IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNjg1MjQyJSwgNzIuMTY5NDk1JSwgMjkuOTMwMTE1JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzEyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjY3NjA4NiUsIDcxLjgzMzgwMSUsIDI5LjcxOTU0MyUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjMyMDMxMiIgc3RvcC1jb2xvcj0icmdiKDk3LjY2NjkzMSUsIDcxLjQ5ODEwOCUsIDI5LjUwODk3MiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjMyODEyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjY1Nzc3NiUsIDcxLjE2MjQxNSUsIDI5LjI5ODQwMSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjMzNTkzOCIgc3RvcC1jb2xvcj0icmdiKDk3LjY0ODYyMSUsIDcwLjgyNjcyMSUsIDI5LjA4NzgzJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzQzNzUiIHN0b3AtY29sb3I9InJnYig5Ny42Mzk0NjUlLCA3MC40OTEwMjglLCAyOC44NzcyNTglKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC4zNTE1NjMiIHN0b3AtY29sb3I9InJnYig5Ny42MzAzMSUsIDcwLjE1NTMzNCUsIDI4LjY2NTE2MSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjM1OTM3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjYyMTE1NSUsIDY5LjgxOTY0MSUsIDI4LjQ1NDU5JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzY3MTg4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNjEyJSwgNjkuNDgzOTQ4JSwgMjguMjQ0MDE5JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNjAyODQ0JSwgNjkuMTQ4MjU0JSwgMjguMDMzNDQ3JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzgyODEzIiBzdG9wLWNvbG9yPSJyZ2IoOTcuNTkzNjg5JSwgNjguODEyNTYxJSwgMjcuODIyODc2JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzkwNjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNTg0NTM0JSwgNjguNDc2ODY4JSwgMjcuNjEyMzA1JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuMzk4NDM4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNTc1Mzc4JSwgNjguMTQxMTc0JSwgMjcuNDAxNzMzJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNDA2MjUiIHN0b3AtY29sb3I9InJnYig5Ny41NjYyMjMlLCA2Ny44MDU0ODElLCAyNy4xOTExNjIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40MTQwNjMiIHN0b3AtY29sb3I9InJnYig5Ny41NTcwNjglLCA2Ny40Njk3ODglLCAyNi45ODA1OTElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40MjE4NzUiIHN0b3AtY29sb3I9InJnYig5Ny41NDc5MTMlLCA2Ny4xMzQwOTQlLCAyNi43NzAwMiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjQyOTY4OCIgc3RvcC1jb2xvcj0icmdiKDk3LjUzODc1NyUsIDY2Ljc5ODQwMSUsIDI2LjU1OTQ0OCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjQzNzUiIHN0b3AtY29sb3I9InJnYig5Ny41Mjk2MDIlLCA2Ni40NjI3MDglLCAyNi4zNDg4NzclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40NDUzMTMiIHN0b3AtY29sb3I9InJnYig5Ny41MjA0NDclLCA2Ni4xMjcwMTQlLCAyNi4xMzgzMDYlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40NTMxMjUiIHN0b3AtY29sb3I9InJnYig5Ny41MTEyOTIlLCA2NS43OTEzMjElLCAyNS45Mjc3MzQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40NjA5MzgiIHN0b3AtY29sb3I9InJnYig5Ny41MDIxMzYlLCA2NS40NTQxMDIlLCAyNS43MTcxNjMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC40Njg3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjQ5Mjk4MSUsIDY1LjExODQwOCUsIDI1LjUwNjU5MiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjQ3NjU2MiIgc3RvcC1jb2xvcj0icmdiKDk3LjQ4MzgyNiUsIDY0Ljc4MjcxNSUsIDI1LjI5NjAyMSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjQ4NDM3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjQ3NDY3JSwgNjQuNDQ3MDIxJSwgMjUuMDg1NDQ5JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNDkyMTg4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNDY1NTE1JSwgNjQuMTExMzI4JSwgMjQuODc0ODc4JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNSIgc3RvcC1jb2xvcj0icmdiKDk3LjQ1NjM2JSwgNjMuNzc1NjM1JSwgMjQuNjY0MzA3JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNTA3ODEyIiBzdG9wLWNvbG9yPSJyZ2IoOTcuNDQ3MjA1JSwgNjMuNDM5OTQxJSwgMjQuNDUzNzM1JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNTE1NjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNDM4MDQ5JSwgNjMuMTA0MjQ4JSwgMjQuMjQzMTY0JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNTIzNDM4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuNDI4ODk0JSwgNjIuNzY4NTU1JSwgMjQuMDMyNTkzJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNTMxMjUiIHN0b3AtY29sb3I9InJnYig5Ny40MTk3MzklLCA2Mi40MzI4NjElLCAyMy44MjIwMjElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC41MzkwNjIiIHN0b3AtY29sb3I9InJnYig5Ny40MTA1ODMlLCA2Mi4wOTcxNjglLCAyMy42MTE0NSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjU0Njg3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjQwMTQyOCUsIDYxLjc2MTQ3NSUsIDIzLjQwMDg3OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjU1NDY4NyIgc3RvcC1jb2xvcj0icmdiKDk3LjM5MjI3MyUsIDYxLjQyNTc4MSUsIDIzLjE5MDMwOCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjU2MjUiIHN0b3AtY29sb3I9InJnYig5Ny4zODMxMTglLCA2MS4wOTAwODglLCAyMi45Nzk3MzYlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC41NzAzMTIiIHN0b3AtY29sb3I9InJnYig5Ny4zNzM5NjIlLCA2MC43NTQzOTUlLCAyMi43NjkxNjUlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC41NzgxMjUiIHN0b3AtY29sb3I9InJnYig5Ny4zNjQ4MDclLCA2MC40MTg3MDElLCAyMi41NTg1OTQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC41ODU5MzgiIHN0b3AtY29sb3I9InJnYig5Ny4zNTU2NTIlLCA2MC4wODMwMDglLCAyMi4zNDgwMjIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC41OTM3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjM0NjQ5NyUsIDU5Ljc0NzMxNCUsIDIyLjEzNzQ1MSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjYwMTU2MiIgc3RvcC1jb2xvcj0icmdiKDk3LjMzNzM0MSUsIDU5LjQxMTYyMSUsIDIxLjkyNjg4JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNjA5Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMzI4MTg2JSwgNTkuMDc1OTI4JSwgMjEuNzE2MzA5JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNjE3MTg4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMzE5MDMxJSwgNTguNzQwMjM0JSwgMjEuNTA0MjExJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMzA5ODc1JSwgNTguNDA0NTQxJSwgMjEuMjkzNjQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42MzI4MTIiIHN0b3AtY29sb3I9InJnYig5Ny4zMDA3MiUsIDU4LjA2NzMyMiUsIDIxLjA4MzA2OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjY0MDYyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjI5MTU2NSUsIDU3LjczMTYyOCUsIDIwLjg3MjQ5OCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjY0ODQzOCIgc3RvcC1jb2xvcj0icmdiKDk3LjI4MjQxJSwgNTcuMzk1OTM1JSwgMjAuNjYxOTI2JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuNjU2MjUiIHN0b3AtY29sb3I9InJnYig5Ny4yNzMyNTQlLCA1Ny4wNjAyNDIlLCAyMC40NTEzNTUlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42NjQwNjIiIHN0b3AtY29sb3I9InJnYig5Ny4yNjQwOTklLCA1Ni43MjQ1NDglLCAyMC4yNDA3ODQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42NzE4NzUiIHN0b3AtY29sb3I9InJnYig5Ny4yNTQ5NDQlLCA1Ni4zODg4NTUlLCAyMC4wMzAyMTIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42Nzk2ODgiIHN0b3AtY29sb3I9InJnYig5Ny4yNDU3ODklLCA1Ni4wNTMxNjIlLCAxOS44MTk2NDElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42ODc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMjM2NjMzJSwgNTUuNzE3NDY4JSwgMTkuNjA5MDclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC42OTUzMTIiIHN0b3AtY29sb3I9InJnYig5Ny4yMjc0NzglLCA1NS4zODE3NzUlLCAxOS4zOTg0OTklKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC43MDMxMjUiIHN0b3AtY29sb3I9InJnYig5Ny4yMTgzMjMlLCA1NS4wNDYwODIlLCAxOS4xODc5MjclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC43MTA5MzgiIHN0b3AtY29sb3I9InJnYig5Ny4yMDkxNjclLCA1NC43MTAzODglLCAxOC45NzczNTYlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC43MTg3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjIwMDAxMiUsIDU0LjM3NDY5NSUsIDE4Ljc2Njc4NSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjcyNjU2MiIgc3RvcC1jb2xvcj0icmdiKDk3LjE5MDg1NyUsIDU0LjAzOTAwMSUsIDE4LjU1NjIxMyUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjczNDM3NSIgc3RvcC1jb2xvcj0icmdiKDk3LjE4MTcwMiUsIDUzLjcwMzMwOCUsIDE4LjM0NTY0MiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc0MjE4OCIgc3RvcC1jb2xvcj0icmdiKDk3LjE3MjU0NiUsIDUzLjM2NzYxNSUsIDE4LjEzNTA3MSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMTYzMzkxJSwgNTMuMDMxOTIxJSwgMTcuOTI0NSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc1NzgxMyIgc3RvcC1jb2xvcj0icmdiKDk3LjE1NDIzNiUsIDUyLjY5NjIyOCUsIDE3LjcxMzkyOCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc2NTYyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjE0NTA4MSUsIDUyLjM2MDUzNSUsIDE3LjUwMzM1NyUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc3MzQzOCIgc3RvcC1jb2xvcj0icmdiKDk3LjEzNTkyNSUsIDUyLjAyNDg0MSUsIDE3LjI5Mjc4NiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjc4MTI1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMTI2NzclLCA1MS42ODkxNDglLCAxNy4wODIyMTQlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC43ODkwNjIiIHN0b3AtY29sb3I9InJnYig5Ny4xMTc2MTUlLCA1MS4zNTM0NTUlLCAxNi44NzE2NDMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC43OTY4NzUiIHN0b3AtY29sb3I9InJnYig5Ny4xMDg0NTklLCA1MS4wMTYyMzUlLCAxNi42NjEwNzIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC44MDQ2ODgiIHN0b3AtY29sb3I9InJnYig5Ny4wOTkzMDQlLCA1MC42ODA1NDIlLCAxNi40NTA1JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuODEyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjA5MDE0OSUsIDUwLjM0NDg0OSUsIDE2LjIzOTkyOSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjgyMDMxMyIgc3RvcC1jb2xvcj0icmdiKDk3LjA4MDk5NCUsIDUwLjAwOTE1NSUsIDE2LjAyOTM1OCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjgyODEyNSIgc3RvcC1jb2xvcj0icmdiKDk3LjA3MTgzOCUsIDQ5LjY3MzQ2MiUsIDE1LjgxODc4NyUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjgzNTkzOCIgc3RvcC1jb2xvcj0icmdiKDk3LjA2MjY4MyUsIDQ5LjMzNzc2OSUsIDE1LjYwODIxNSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjg0Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMDUzNTI4JSwgNDkuMDAyMDc1JSwgMTUuMzk3NjQ0JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuODUxNTYyIiBzdG9wLWNvbG9yPSJyZ2IoOTcuMDQ0MzczJSwgNDguNjY2MzgyJSwgMTUuMTg3MDczJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuODU5Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMDM1MjE3JSwgNDguMzMwNjg4JSwgMTQuOTc2NTAxJSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuODY3MTg4IiBzdG9wLWNvbG9yPSJyZ2IoOTcuMDI2MDYyJSwgNDcuOTk0OTk1JSwgMTQuNzY1OTMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC44NzUiIHN0b3AtY29sb3I9InJnYig5Ny4wMTY5MDclLCA0Ny42NTkzMDIlLCAxNC41NTUzNTklKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC44ODI4MTMiIHN0b3AtY29sb3I9InJnYig5Ny4wMDc3NTElLCA0Ny4zMjM2MDglLCAxNC4zNDQ3ODglKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC44OTA2MjUiIHN0b3AtY29sb3I9InJnYig5Ni45OTg1OTYlLCA0Ni45ODc5MTUlLCAxNC4xMzI2OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjg5ODQzOCIgc3RvcC1jb2xvcj0icmdiKDk2Ljk4OTQ0MSUsIDQ2LjY1MjIyMiUsIDEzLjkyMjExOSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjkwNjI1IiBzdG9wLWNvbG9yPSJyZ2IoOTYuOTgwMjg2JSwgNDYuMzE2NTI4JSwgMTMuNzExNTQ4JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuOTE0MDYyIiBzdG9wLWNvbG9yPSJyZ2IoOTYuOTcxMTMlLCA0NS45ODA4MzUlLCAxMy41MDA5NzclKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC45MjE4NzUiIHN0b3AtY29sb3I9InJnYig5Ni45NjE5NzUlLCA0NS42NDUxNDIlLCAxMy4yOTA0MDUlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC45Mjk2ODgiIHN0b3AtY29sb3I9InJnYig5Ni45NTI4MiUsIDQ1LjMwOTQ0OCUsIDEzLjA3OTgzNCUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjkzNzUiIHN0b3AtY29sb3I9InJnYig5Ni45NDM2NjUlLCA0NC45NzM3NTUlLCAxMi44NjkyNjMlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC45NDUzMTMiIHN0b3AtY29sb3I9InJnYig5Ni45MzQ1MDklLCA0NC42MzgwNjIlLCAxMi42NTg2OTElKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjxzdG9wIG9mZnNldD0iMC45NTMxMjUiIHN0b3AtY29sb3I9InJnYig5Ni45MjUzNTQlLCA0NC4zMDIzNjglLCAxMi40NDgxMiUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjk2MDkzOCIgc3RvcC1jb2xvcj0icmdiKDk2LjkxNjE5OSUsIDQzLjk2NjY3NSUsIDEyLjIzNzU0OSUpIiBzdG9wLW9wYWNpdHk9IjEiLz4KPHN0b3Agb2Zmc2V0PSIwLjk2ODc1IiBzdG9wLWNvbG9yPSJyZ2IoOTYuOTA3MDQzJSwgNDMuNjI5NDU2JSwgMTIuMDI2OTc4JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuOTc2NTYyIiBzdG9wLWNvbG9yPSJyZ2IoOTYuODk3ODg4JSwgNDMuMjkzNzYyJSwgMTEuODE2NDA2JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuOTg0Mzc1IiBzdG9wLWNvbG9yPSJyZ2IoOTYuODg4NzMzJSwgNDIuOTU4MDY5JSwgMTEuNjA1ODM1JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjAuOTkyMTg4IiBzdG9wLWNvbG9yPSJyZ2IoOTYuODc5NTc4JSwgNDIuNjIyMzc1JSwgMTEuMzk1MjY0JSkiIHN0b3Atb3BhY2l0eT0iMSIvPgo8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9InJnYig5Ni44NzA0MjIlLCA0Mi4yODY2ODIlLCAxMS4xODQ2OTIlKSIgc3RvcC1vcGFjaXR5PSIxIi8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAtMCkiPgo8ZyBjbGlwLXBhdGg9InVybCgjY2xpcC0xKSI+CjxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZmlsbD0idXJsKCNsaW5lYXItcGF0dGVybi0wKSIgZD0iTSA1MTYuNjg3NSAyNDEuNzMwNDY5IEwgNTE2LjY4NzUgNDA3LjExMzI4MSBMIDM1Ni40NjA5MzggNDA3LjExMzI4MSBMIDM1Ni40NjA5MzggMjQxLjczMDQ2OSBaIE0gNTE2LjY4NzUgMjQxLjczMDQ2OSAiLz4KPC9nPgo8L2c+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgZmlsbD0icmdiKDIzLjEzNjkwMiUsIDYxLjU2NzY4OCUsIDg3LjA1NzQ5NSUpIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gNTgwLjAzNTE1NiAzMjEuNDE0MDYyIEMgNTY3LjA1NDY4OCAzMjEuNDE0MDYyIDU1Ni41MzEyNSAzMzEuOTM3NSA1NTYuNTMxMjUgMzQ0LjkxNzk2OSBDIDU1Ni41MzEyNSAzNTcuODk0NTMxIDU2Ny4wNTQ2ODggMzY4LjQxNzk2OSA1ODAuMDM1MTU2IDM2OC40MTc5NjkgQyA1OTMuMDE1NjI1IDM2OC40MTc5NjkgNjAzLjUzOTA2MiAzNTcuODk0NTMxIDYwMy41MzkwNjIgMzQ0LjkxNzk2OSBDIDYwMy41MzkwNjIgMzMxLjkzNzUgNTkzLjAxNTYyNSAzMjEuNDE0MDYyIDU4MC4wMzUxNTYgMzIxLjQxNDA2MiBaIE0gNTIxLjg1MTU2MiAyMDMuMDM1MTU2IEMgNDg4Ljc0MjE4OCAyMDMuMDM1MTU2IDQ2MS42NTYyNSAyMzAuMTIxMDk0IDQ2MS42NTYyNSAyNjMuMjI2NTYyIEwgNDYxLjY1NjI1IDI4Ni43MzA0NjkgTCA1MDcuNTE5NTMxIDI4Ni43MzA0NjkgQyA1MTIuNTYyNSAyODYuNzMwNDY5IDUxNi42ODc1IDI5MC44NTkzNzUgNTE2LjY4NzUgMjk1LjkwMjM0NCBDIDUxNi42ODc1IDMwMC45NDkyMTkgNTEyLjU2MjUgMzA1LjA3NDIxOSA1MDcuNTE5NTMxIDMwNS4wNzQyMTkgTCA0NTIuNDg0Mzc1IDMwNS4wNzQyMTkgQyA0NDcuNDM3NSAzMDUuMDc0MjE5IDQ0My4zMTI1IDMwOS4xOTkyMTkgNDQzLjMxMjUgMzE0LjI0NjA5NCBDIDQ0My4zMTI1IDMxOS4yOTI5NjkgNDQ3LjQzNzUgMzIzLjQyMTg3NSA0NTIuNDg0Mzc1IDMyMy40MjE4NzUgTCA1MjEuODUxNTYyIDMyMy40MjE4NzUgQyA1NTQuOTUzMTI1IDMyMy40MjE4NzUgNTgyLjA0Mjk2OSAyOTYuMzMyMDMxIDU4Mi4wNDI5NjkgMjYzLjIyNjU2MiBDIDU4Mi4wNDI5NjkgMjMwLjEyMTA5NCA1NTQuOTUzMTI1IDIwMy4wMzUxNTYgNTIxLjg1MTU2MiAyMDMuMDM1MTU2IFogTSA1NTguNDQ5MjE5IDI0OS4xNzk2ODggQyA1NTkuMTk5MjE5IDI1MS4xNDA2MjUgNTYxLjM5ODQzOCAyNTIuMTI1IDU2My4zNjMyODEgMjUxLjM3NSBDIDU2NS4zMjQyMTkgMjUwLjYyMTA5NCA1NjYuMzA0Njg4IDI0OC40MjE4NzUgNTY1LjU1NDY4OCAyNDYuNDY0ODQ0IEMgNTYyLjEzNjcxOSAyMzcuNTU0Njg4IDU1Ni4wNjY0MDYgMjI5Ljk1MzEyNSA1NDguMzE2NDA2IDIyNC42MzI4MTIgQyA1NDAuNzczNDM4IDIxOS40NDUzMTIgNTMxLjY1MjM0NCAyMTYuNDEwMTU2IDUyMS44NTE1NjIgMjE2LjQxMDE1NiBDIDUxOS43MzgyODEgMjE2LjQxMDE1NiA1MTguMDI3MzQ0IDIxOC4xMjEwOTQgNTE4LjAyNzM0NCAyMjAuMjM0Mzc1IEMgNTE4LjAyNzM0NCAyMjIuMzQzNzUgNTE5LjczODI4MSAyMjQuMDU0Njg4IDUyMS44NTE1NjIgMjI0LjA1NDY4OCBDIDUzMC4wOTc2NTYgMjI0LjA1NDY4OCA1MzcuNzM0Mzc1IDIyNi41ODIwMzEgNTQ0LjAxOTUzMSAyMzAuOTAyMzQ0IEMgNTUwLjUwMzkwNiAyMzUuMzU1NDY5IDU1NS41ODU5MzggMjQxLjcxODc1IDU1OC40NDkyMTkgMjQ5LjE3OTY4OCBaIE0gNTYwLjcyMjY1NiAyNjguMTk5MjE5IEMgNTYwLjQ2MDkzOCAyNzAuMjg1MTU2IDU2MS45NDE0MDYgMjcyLjE4NzUgNTY0LjAyNzM0NCAyNzIuNDUzMTI1IEMgNTY2LjEwOTM3NSAyNzIuNzE0ODQ0IDU2OC4wMTU2MjUgMjcxLjIzODI4MSA1NjguMjc3MzQ0IDI2OS4xNTIzNDQgQyA1NjguNDEwMTU2IDI2OC4xMDE1NjIgNTY4LjUwNzgxMiAyNjcuMTE3MTg4IDU2OC41NjY0MDYgMjY2LjE5OTIxOSBDIDU2OC42MzI4MTIgMjY1LjEzNjcxOSA1NjguNjY3OTY5IDI2NC4xNDQ1MzEgNTY4LjY2Nzk2OSAyNjMuMjI2NTYyIEMgNTY4LjY2Nzk2OSAyNjEuMTE3MTg4IDU2Ni45NTMxMjUgMjU5LjQwNjI1IDU2NC44NDM3NSAyNTkuNDA2MjUgQyA1NjIuNzM0Mzc1IDI1OS40MDYyNSA1NjEuMDIzNDM4IDI2MS4xMTcxODggNTYxLjAyMzQzOCAyNjMuMjI2NTYyIEMgNTYxLjAyMzQzOCAyNjQuMTQ0NTMxIDU2MSAyNjQuOTc2NTYyIDU2MC45NTMxMjUgMjY1LjcyMjY1NiBDIDU2MC44OTQ1MzEgMjY2LjYyODkwNiA1NjAuODIwMzEyIDI2Ny40NTcwMzEgNTYwLjcyMjY1NiAyNjguMTk5MjE5IFogTSA1NjAuNzIyNjU2IDI2OC4xOTkyMTkgIi8+CjxwYXRoIGZpbGwtcnVsZT0ibm9uemVybyIgZmlsbD0icmdiKDIzLjEzNjkwMiUsIDYxLjU2NzY4OCUsIDg3LjA1NzQ5NSUpIiBmaWxsLW9wYWNpdHk9IjEiIGQ9Ik0gNDE0Ljk1NzAzMSA0OTUuNjY3OTY5IEwgMzk4LjQyOTY4OCA0NTYuNDY0ODQ0IEMgMzk2LjUyNzM0NCA0NTEuNzIyNjU2IDM5MC4xNzE4NzUgNDUxLjc5Mjk2OSAzODguMjY5NTMxIDQ1Ni40NjQ4NDQgTCAzNzEuNzQyMTg4IDQ5NS42Njc5NjkgQyAzNzEuNTQyOTY5IDQ5Ni4xNDQ1MzEgMzcxLjQxNDA2MiA0OTYuNjkxNDA2IDM3MS40MTQwNjIgNDk3LjI5Njg3NSBDIDM3MS40MTQwNjIgNDk5LjUzMTI1IDM3My4yNDIxODggNTAxLjM1OTM3NSAzNzUuNDc2NTYyIDUwMS4zNTkzNzUgQyAzNzcuMTA1NDY5IDUwMS4zNTkzNzUgMzc4LjU4NTkzOCA1MDAuMzUxNTYyIDM3OS4xOTE0MDYgNDk4Ljk4NDM3NSBMIDM4MS4yMjI2NTYgNDk0LjE4MzU5NCBDIDM4MS42OTkyMTkgNDkyLjk2MDkzOCAzODMuMzI4MTI1IDQ5MS44Nzg5MDYgMzg0LjY4MzU5NCA0OTEuODc4OTA2IEwgNDAyLjAxNTYyNSA0OTEuODc4OTA2IEMgNDAzLjM3MTA5NCA0OTEuODc4OTA2IDQwNSA0OTIuOTYwOTM4IDQwNS40NzI2NTYgNDk0LjE4MzU5NCBMIDQwNy41MDc4MTIgNDk4Ljk4NDM3NSBDIDQwOC4xODM1OTQgNTAwLjQxMDE1NiA0MDkuNjA5Mzc1IDUwMS4zNTkzNzUgNDExLjIyMjY1NiA1MDEuMzU5Mzc1IEMgNDEzLjM5ODQzOCA1MDEuMzU5Mzc1IDQxNS4yODUxNTYgNDk5LjUzMTI1IDQxNS4yODUxNTYgNDk3LjI5Njg3NSBDIDQxNS4yODUxNTYgNDk2Ljc1IDQxNS4xNTYyNSA0OTYuMTQ0NTMxIDQxNC45NTcwMzEgNDk1LjY2Nzk2OSBaIE0gMzg2LjU4NTkzOCA0ODEuNDQ5MjE5IEwgMzkyLjQwNjI1IDQ2Ny43MDMxMjUgQyAzOTIuODgyODEyIDQ2Ni40OTIxODggMzkzLjgzMjAzMSA0NjYuNDkyMTg4IDM5NC4yOTI5NjkgNDY3LjcwMzEyNSBMIDQwMC4xMjg5MDYgNDgxLjQ0OTIxOSBDIDQwMC41ODk4NDQgNDgyLjY3MTg3NSAzOTkuOTI1NzgxIDQ4My43NTM5MDYgMzk4LjU1ODU5NCA0ODMuNzUzOTA2IEwgMzg4LjE0MDYyNSA0ODMuNzUzOTA2IEMgMzg2Ljc4NTE1NiA0ODMuNzUzOTA2IDM4Ni4xMDkzNzUgNDgyLjY3MTg3NSAzODYuNTg1OTM4IDQ4MS40NDkyMTkgWiBNIDQ3OC4zMzk4NDQgNDk1LjY2Nzk2OSBMIDQ2MS44MTI1IDQ1Ni40NjQ4NDQgQyA0NTkuOTI1NzgxIDQ1MS43MjI2NTYgNDUzLjU1NDY4OCA0NTEuNzkyOTY5IDQ1MS42NTIzNDQgNDU2LjQ2NDg0NCBMIDQzNS4xMjg5MDYgNDk1LjY2Nzk2OSBDIDQzNC45MjU3ODEgNDk2LjE0NDUzMSA0MzQuNzk2ODc1IDQ5Ni42OTE0MDYgNDM0Ljc5Njg3NSA0OTcuMjk2ODc1IEMgNDM0Ljc5Njg3NSA0OTkuNTMxMjUgNDM2LjYyNSA1MDEuMzU5Mzc1IDQzOC44NTkzNzUgNTAxLjM1OTM3NSBDIDQ0MC40ODgyODEgNTAxLjM1OTM3NSA0NDEuOTcyNjU2IDUwMC4zNTE1NjIgNDQyLjU3ODEyNSA0OTguOTg0Mzc1IEwgNDQ0LjYyMTA5NCA0OTQuMTgzNTk0IEMgNDQ1LjA4MjAzMSA0OTIuOTYwOTM4IDQ0Ni43MTA5MzggNDkxLjg3ODkwNiA0NDguMDY2NDA2IDQ5MS44Nzg5MDYgTCA0NjUuMzk4NDM4IDQ5MS44Nzg5MDYgQyA0NjYuNzUzOTA2IDQ5MS44Nzg5MDYgNDY4LjM4MjgxMiA0OTIuOTYwOTM4IDQ2OC44NTkzNzUgNDk0LjE4MzU5NCBMIDQ3MC44OTA2MjUgNDk4Ljk4NDM3NSBDIDQ3MS41NjY0MDYgNTAwLjQxMDE1NiA0NzIuOTkyMTg4IDUwMS4zNTkzNzUgNDc0LjYyMTA5NCA1MDEuMzU5Mzc1IEMgNDc2Ljc4MTI1IDUwMS4zNTkzNzUgNDc4LjY4MzU5NCA0OTkuNTMxMjUgNDc4LjY4MzU5NCA0OTcuMjk2ODc1IEMgNDc4LjY4MzU5NCA0OTYuNzUgNDc4LjUzOTA2MiA0OTYuMTQ0NTMxIDQ3OC4zMzk4NDQgNDk1LjY2Nzk2OSBaIE0gNDQ5Ljk2ODc1IDQ4MS40NDkyMTkgTCA0NTUuNzg5MDYyIDQ2Ny43MDMxMjUgQyA0NTYuMjY1NjI1IDQ2Ni40OTIxODggNDU3LjIxNDg0NCA0NjYuNDkyMTg4IDQ1Ny42OTE0MDYgNDY3LjcwMzEyNSBMIDQ2My41MTE3MTkgNDgxLjQ0OTIxOSBDIDQ2My45ODgyODEgNDgyLjY3MTg3NSA0NjMuMzEyNSA0ODMuNzUzOTA2IDQ2MS45NTcwMzEgNDgzLjc1MzkwNiBMIDQ1MS41MjM0MzggNDgzLjc1MzkwNiBDIDQ1MC4xNjc5NjkgNDgzLjc1MzkwNiA0NDkuNDkyMTg4IDQ4Mi42NzE4NzUgNDQ5Ljk2ODc1IDQ4MS40NDkyMTkgWiBNIDU0MS43MjI2NTYgNDk1LjY2Nzk2OSBMIDUyNS4yMTA5MzggNDU2LjQ2NDg0NCBDIDUyMy4zMDg1OTQgNDUxLjcyMjY1NiA1MTYuOTQxNDA2IDQ1MS43OTI5NjkgNTE1LjA1MDc4MSA0NTYuNDY0ODQ0IEwgNDk4LjUyMzQzOCA0OTUuNjY3OTY5IEMgNDk4LjMyNDIxOSA0OTYuMTQ0NTMxIDQ5OC4xNzk2ODggNDk2LjY5MTQwNiA0OTguMTc5Njg4IDQ5Ny4yOTY4NzUgQyA0OTguMTc5Njg4IDQ5OS41MzEyNSA1MDAuMDA3ODEyIDUwMS4zNTkzNzUgNTAyLjI0MjE4OCA1MDEuMzU5Mzc1IEMgNTAzLjg3MTA5NCA1MDEuMzU5Mzc1IDUwNS4zNTU0NjkgNTAwLjM1MTU2MiA1MDUuOTc2NTYyIDQ5OC45ODQzNzUgTCA1MDguMDA3ODEyIDQ5NC4xODM1OTQgQyA1MDguNDgwNDY5IDQ5Mi45NjA5MzggNTEwLjA5Mzc1IDQ5MS44Nzg5MDYgNTExLjQ0OTIxOSA0OTEuODc4OTA2IEwgNTI4Ljc5Njg3NSA0OTEuODc4OTA2IEMgNTMwLjE1MjM0NCA0OTEuODc4OTA2IDUzMS43NjU2MjUgNDkyLjk2MDkzOCA1MzIuMjQyMTg4IDQ5NC4xODM1OTQgTCA1MzQuMjczNDM4IDQ5OC45ODQzNzUgQyA1MzQuOTQ5MjE5IDUwMC40MTAxNTYgNTM2LjM3NSA1MDEuMzU5Mzc1IDUzOC4wMDM5MDYgNTAxLjM1OTM3NSBDIDU0MC4xNjc5NjkgNTAxLjM1OTM3NSA1NDIuMDY2NDA2IDQ5OS41MzEyNSA1NDIuMDY2NDA2IDQ5Ny4yOTY4NzUgQyA1NDIuMDY2NDA2IDQ5Ni43NSA1NDEuOTI1NzgxIDQ5Ni4xNDQ1MzEgNTQxLjcyMjY1NiA0OTUuNjY3OTY5IFogTSA1MTMuMzUxNTYyIDQ4MS40NDkyMTkgTCA1MTkuMTcxODc1IDQ2Ny43MDMxMjUgQyA1MTkuNjQ4NDM4IDQ2Ni40OTIxODggNTIwLjU5NzY1NiA0NjYuNDkyMTg4IDUyMS4wNzQyMTkgNDY3LjcwMzEyNSBMIDUyNi44OTQ1MzEgNDgxLjQ0OTIxOSBDIDUyNy4zNzEwOTQgNDgyLjY3MTg3NSA1MjYuNjk1MzEyIDQ4My43NTM5MDYgNTI1LjMzOTg0NCA0ODMuNzUzOTA2IEwgNTE0LjkwNjI1IDQ4My43NTM5MDYgQyA1MTMuNTU0Njg4IDQ4My43NTM5MDYgNTEyLjg3NSA0ODIuNjcxODc1IDUxMy4zNTE1NjIgNDgxLjQ0OTIxOSBaIE0gNTYwLjAwNzgxMiA0OTQuMDQyOTY5IEMgNTY0LjA3MDMxMiA0OTguMzA0Njg4IDU2OS40Mjk2ODggNTAxLjAxNTYyNSA1NzUuNTIzNDM4IDUwMS4wMTU2MjUgQyA1ODQuNTg5ODQ0IDUwMS4wMTU2MjUgNTkxLjQzMzU5NCA0OTQuNTg5ODQ0IDU5MS40MzM1OTQgNDg3Ljk0NTMxMiBDIDU5MS40MzM1OTQgNDc4Ljk0MTQwNiA1ODMuMjM0Mzc1IDQ3NC44MjAzMTIgNTc2LjY3OTY4OCA0NzIuMzEyNSBDIDU3MC45ODgyODEgNDcwLjEzNjcxOSA1NjcuNzMwNDY5IDQ2OC40NTMxMjUgNTY3LjczMDQ2OSA0NjYuMDE1NjI1IEMgNTY3LjczMDQ2OSA0NjMuOTE0MDYyIDU3MC4zNjcxODggNDYxLjA1ODU5NCA1NzUuMzI0MjE5IDQ2MS4wNTg1OTQgQyA1NzguODM5ODQ0IDQ2MS4wNTg1OTQgNTgxLjIwMzEyNSA0NjIuMjg1MTU2IDU4Mi45NzI2NTYgNDY0LjMxNjQwNiBDIDU4My43ODEyNSA0NjUuMTk1MzEyIDU4NC43ODkwNjIgNDY1LjY3MTg3NSA1ODYuMDE1NjI1IDQ2NS42NzE4NzUgQyA1ODguMjQ2MDk0IDQ2NS42NzE4NzUgNTkwLjA3ODEyNSA0NjMuODM5ODQ0IDU5MC4wNzgxMjUgNDYxLjYwNTQ2OSBDIDU5MC4wNzgxMjUgNDYwLjU5NzY1NiA1ODkuNjc1NzgxIDQ1OS41NzQyMTkgNTg5LjA3MDMxMiA0NTguODk4NDM4IEMgNTg2LjA4NTkzOCA0NTUuNTg1OTM4IDU4MS42MjEwOTQgNDUyLjk0OTIxOSA1NzUuMzI0MjE5IDQ1Mi45NDkyMTkgQyA1NjUuNjI1IDQ1Mi45NDkyMTkgNTU5LjYwNTQ2OSA0NTkuNTAzOTA2IDU1OS42MDU0NjkgNDY2LjAxNTYyNSBDIDU1OS42MDU0NjkgNDczLjQ2NDg0NCA1NjYuMTAxNTYyIDQ3Ni45ODA0NjkgNTczLjgyNDIxOSA0NzkuODkwNjI1IEMgNTc5LjMxNjQwNiA0ODEuOTk2MDk0IDU4My4zMDQ2ODggNDg0LjIzMDQ2OSA1ODMuMzA0Njg4IDQ4Ny45NDUzMTIgQyA1ODMuMzA0Njg4IDQ4OS45MjE4NzUgNTgwLjI2NTYyNSA0OTIuODg2NzE5IDU3NS41MjM0MzggNDkyLjg4NjcxOSBDIDU3MS44NjcxODggNDkyLjg4NjcxOSA1NjguNjA5Mzc1IDQ5MS4zMzIwMzEgNTY1LjgyODEyNSA0ODguNDIxODc1IEMgNTY1LjA5Mzc1IDQ4Ny42MTMyODEgNTY0LjA3MDMxMiA0ODcuMjEwOTM4IDU2Mi45MTc5NjkgNDg3LjIxMDkzOCBDIDU2MC43NTc4MTIgNDg3LjIxMDkzOCA1NTguODU1NDY5IDQ4OS4wNDI5NjkgNTU4Ljg1NTQ2OSA0OTEuMjczNDM4IEMgNTU4Ljg1NTQ2OSA0OTIuMjgxMjUgNTU5LjMyODEyNSA0OTMuMzYzMjgxIDU2MC4wMDc4MTIgNDk0LjA0Mjk2OSBaIE0gNTYwLjAwNzgxMiA0OTQuMDQyOTY5ICIvPgo8L3N2Zz4K";
+const $=(s,r=document)=>r.querySelector(s);
+const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nf=new Intl.NumberFormat("fr-FR");
+const f=n=>nf.format(Math.round(n||0));
+const F=n=>f(n)+" F";
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const iso=n=>{const x=new Date();x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
+const dfr=s=>{const [y,m,d]=s.split("-");return d+"/"+m+"/"+y};
+
+/* ---------- paramètres tarifaires (modifiables par l'AAAS) ---------- */
+const T={forfait:5000,m3:2000,franchiseKm:5,approcheKm:300,stationKm:250,ruelle:2000,tuyau:3000,
+  curageBase:10000,curageMl:800,debouchage:15000,pointe:0.15,hivernage:0.10,urgence:0.20,programme:-0.05,arrondi:500,
+  abo:25000,commission:0.10,mandat:0.05,bonusFlotte:0.01};
+
+const Q=[
+ {id:"parcelles",n:"Parcelles Assainies",a:4,s:3,st:"STBV de Cambérène"},
+ {id:"guediawaye",n:"Guédiawaye",a:6,s:7,st:"STBV de Cambérène"},
+ {id:"keurmassar",n:"Keur Massar",a:7,s:7,st:"STBV de Tivaouane Peulh"},
+ {id:"pikine",n:"Pikine",a:5,s:3,st:"STBV de Pikine"},
+ {id:"yeumbeul",n:"Yeumbeul",a:6,s:6,st:"STBV de Tivaouane Peulh"},
+ {id:"thiaroye",n:"Thiaroye",a:4,s:5,st:"STBV de Pikine"},
+ {id:"mbao",n:"Mbao",a:6,s:8,st:"STBV de Rufisque"},
+ {id:"rufisque",n:"Rufisque",a:5,s:3,st:"STBV de Rufisque"},
+ {id:"grandyoff",n:"Grand Yoff",a:5,s:5,st:"STBV de Cambérène"},
+ {id:"liberte",n:"Sicap Liberté",a:6,s:7,st:"STBV de Cambérène"},
+ {id:"ouakam",n:"Ouakam",a:8,s:10,st:"STBV de Cambérène"},
+ {id:"almadies",n:"Almadies / Ngor",a:9,s:11,st:"STBV de Cambérène"},
+ {id:"medina",n:"Médina",a:9,s:12,st:"STBV de Cambérène"},
+ {id:"bambilor",n:"Bambilor",a:8,s:9,st:"STBV de Tivaouane Peulh"},
+ {id:"diamniadio",n:"Diamniadio",a:10,s:14,st:"STBV de Rufisque"}
+];
+const VOLS=[{v:6,l:"Petite"},{v:10,l:"Standard"},{v:12,l:"Grande"},{v:16,l:"Très grande"}];
+const STATIONS=[
+ {n:"STBV de Cambérène",d:"Dans la STEP de Cambérène (ONAS). Dessert Parcelles, Grand Yoff, Guédiawaye, Dakar centre et ouest."},
+ {n:"STBV de Pikine",d:"Dans la STEP de Pikine (ONAS). Dessert Pikine, Thiaroye et les quartiers voisins."},
+ {n:"STBV de Rufisque",d:"Dans la STEP de Rufisque (ONAS). Dessert Rufisque, Mbao, Diamniadio."},
+ {n:"STBV de Tivaouane Peulh",d:"Dans la STEP de Tivaouane Peulh (ONAS). Dessert Keur Massar, Yeumbeul, Bambilor."}
+];
+const DRV=[
+ {id:"d1",n:"Modou Diagne",ini:"MD",col:"#3d9ddf",truck:"Mercedes Axor",cap:10,immat:"DK-3301-AX",tel:"+221 77 512 48 90",note:4.8,nb:212,plan:"premium",eta:12,pts:1240,base:2.1,online:true,busy:false},
+ {id:"d2",n:"Ablaye Ndiaye",ini:"AN",col:"#5b6fb5",truck:"Renault Midlum",cap:12,immat:"DK-5540-BA",tel:"+221 78 330 61 04",note:4.6,nb:97,plan:"basique",eta:9,pts:980,base:1.4,online:true,busy:false},
+ {id:"d3",n:"Coumba Sarr",ini:"CS",col:"#f7731f",truck:"DAF CF",cap:16,immat:"TH-3310-C",tel:"+221 76 204 77 15",note:4.9,nb:154,plan:"premium",eta:21,pts:1315,base:3.4,online:true,busy:false},
+ {id:"d4",n:"Pape Ndour",ini:"PN",col:"#1f9467",truck:"Iveco Eurocargo",cap:10,immat:"DK-7702-BC",tel:"+221 77 901 23 56",note:4.7,nb:183,plan:"premium",eta:15,pts:1290,base:2.6,online:true,busy:true},
+ {id:"d5",n:"Ibou Faye",ini:"IF",col:"#8a5cc2",truck:"Isuzu FVR",cap:8,immat:"DK-6620-BB",tel:"+221 70 448 19 72",note:4.5,nb:66,plan:"basique",eta:17,pts:870,base:4.1,online:true,busy:false},
+ {id:"d6",n:"Serigne Mbaye",ini:"SM",col:"#b67a12",truck:"Mercedes Atego",cap:12,immat:"TH-1208-B",tel:"+221 77 615 02 38",note:4.4,nb:51,plan:"basique",eta:40,pts:760,base:9.2,online:true,busy:false}
+];
+
+const DEMO_DRV=DRV.map(x=>Object.assign({},x));
+/* ---------- état ---------- */
+const S={
+  tab:ls.get("setal-tab")||"client",
+  sim:{pointe:false,hivernage:false},
+  c:{step:0,svc:"fosse",when:"now",vol:10,ml:30,ruelle:false,tuyau:false,q:"parcelles",repere:"Près de la mosquée de l'Unité 17",date:iso(2),heure:"09:00",drv:null,pay:"wave",track:0,photo:null,rating:0,tags:[],comment:"",rated:false,rappel:true,prog1:0,prog2:0,nom:"Alpha",tel:"77 123 45 67",adresse:"Cité Alpha, villa 42",same:false,contactNom:"Awa Diop (gardienne)",contactTel:"76 555 22 11",scan:0,refused:[],sv:{}},
+  adj:{amount:2000,motif:"Rue ensablée, manœuvre longue"},
+  d:{plan:"premium",online:true,view:"home",req:true,mstep:0,code:"",anoms:[],cash:"wave",nav:false,prog:0},
+  g:{view:"home",tel:"77 450 12 33",q:"thiaroye",vol:10,sent:0,mandat:87500,nbApport:31},
+  k:{missions:44,prix:28000,boost:20}
+};
+
+/* ---------- moteur de prix ---------- */
+function prix(c,sim){
+  const q=Q.find(x=>x.id===c.q)||Q[0];
+  const L=[];
+  if(c.svc==="fosse"){
+    L.push({l:"Forfait de déplacement",s:"Mobilisation du camion et de l'équipe",v:T.forfait});
+    L.push({l:"Volume pompé",s:c.vol+" m³ × "+f(T.m3)+" F",v:c.vol*T.m3});
+  }else if(c.svc==="reseau"){
+    L.push({l:"Forfait curage",s:"Hydrocureur + 2 opérateurs",v:T.curageBase});
+    L.push({l:"Linéaire de réseau",s:c.ml+" m × "+f(T.curageMl)+" F",v:c.ml*T.curageMl});
+  }else{
+    L.push({l:"Forfait débouchage",s:"Canalisation ou regard bouché",v:T.debouchage});
+  }
+  const ap=Math.max(0,q.a-T.franchiseKm);
+  L.push({l:"Distance d'approche",s:ap?q.a+" km ("+T.franchiseKm+" km inclus) × "+T.approcheKm+" F":q.a+" km, inclus dans le forfait",v:ap*T.approcheKm});
+  if(c.svc!=="debouchage") L.push({l:"Transport vers la station",s:q.s+" km jusqu'à la "+q.st+" × "+T.stationKm+" F",v:q.s*T.stationKm});
+  if(c.ruelle) L.push({l:"Accès difficile",s:"Ruelle étroite, petit camion ou manœuvre",v:T.ruelle});
+  if(c.tuyau) L.push({l:"Tuyau supplémentaire",s:"Fosse à plus de 30 m du camion",v:T.tuyau});
+  const sub=L.reduce((a,x)=>a+x.v,0);
+  const M=[];
+  if(c.when==="now"&&sim.pointe) M.push({l:"Forte demande en ce moment",p:T.pointe});
+  if(sim.hivernage) M.push({l:"Période d'hivernage",p:T.hivernage});
+  if(c.when==="plan") M.push({l:"Réduction créneau programmé",p:T.programme});
+  M.forEach(m=>m.v=sub*m.p);
+  const raw=sub+M.reduce((a,m)=>a+m.v,0);
+  const total=Math.round(raw/T.arrondi)*T.arrondi;
+  return {q,L,sub,M,total};
+}
+
+/* ---------- icônes ---------- */
+const I={
+ fosse:'<svg viewBox="0 0 48 48" fill="none"><rect x="6" y="18" width="36" height="22" rx="5" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="2.5"/><path d="M6 30h36" stroke="var(--orange)" stroke-width="2.5" stroke-dasharray="3 3"/><rect x="18" y="10" width="12" height="9" rx="2" fill="var(--surface)" stroke="var(--blue)" stroke-width="2.5"/></svg>',
+ reseau:'<svg viewBox="0 0 48 48" fill="none"><path d="M4 18h18a6 6 0 0 1 6 6v0a6 6 0 0 0 6 6h10" stroke="var(--blue)" stroke-width="7" stroke-linecap="round"/><path d="M4 18h18a6 6 0 0 1 6 6v0a6 6 0 0 0 6 6h10" stroke="var(--blue-soft)" stroke-width="2.5" stroke-linecap="round"/><circle cx="38" cy="14" r="4" fill="var(--orange)"/></svg>',
+ debouchage:'<svg viewBox="0 0 48 48" fill="none"><path d="M24 5v18" stroke="var(--fg-2)" stroke-width="3" stroke-linecap="round"/><path d="M12 32c0-6 5-10 12-10s12 4 12 10z" fill="var(--orange)"/><path d="M8 40h32" stroke="var(--blue)" stroke-width="3" stroke-linecap="round"/></svg>',
+ qr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>',
+ back:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>',
+ check:'<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>',
+ home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+ truck:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16V6h12v10M14 9h4l4 4v3h-8"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/></svg>',
+ moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14A8 8 0 1 1 10 4a6.5 6.5 0 0 0 10 10z"/></svg>',
+ user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+ plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+ lock:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+};
+const SVCN={fosse:"Vidange de fosse",reseau:"Curage de réseau",debouchage:"Débouchage"};
+const stars=n=>"★★★★★".slice(0,Math.round(n))+"☆☆☆☆☆".slice(0,5-Math.round(n));
+
+/* ---------- coque téléphone ---------- */
+function phone(inner,{title="Sëtal",sub="AAAS",back=null,nav=""}={}){
+  return `<div class="phone"><div class="notch"></div><div class="screen">
+   <div class="sbar"><span>09:41</span><span>4G ▮▮▮ 82%</span></div>
+   <div class="appbar">${back?`<button class="back" data-a="${back}" aria-label="Retour">${I.back}</button>`:`<img src="${LOGO}" alt="">`}
+     <div><b>${title}</b><small>${sub}</small></div><div class="grow"></div></div>
+   ${inner}${nav}</div></div>`;
+}
+
+/* ================= CLIENT ================= */
+function clientScreen(){
+  const c=S.c, P=prix(c,S.sim);
+  const D=DRV.find(d=>d.id===c.drv);
+  if(c.step===0){
+    return phone(`<div class="scr">
+      <div class="ref">${I.qr}<span>Vous êtes arrivé par le QR code de <b>Fatou, commerciale AAAS</b> (code COM-014). Pas besoin d'installer l'application.</span></div>
+      <div class="hello">Bonjour ${esc(c.nom)} 👋<br>De quoi avez-vous <em>besoin</em> ?</div>
+      <div class="svc">${["fosse","reseau","debouchage"].map(k=>`<button class="${c.svc===k?"on":""}" data-a="svc" data-v="${k}">${I[k]}${SVCN[k]}</button>`).join("")}</div>
+      <div class="lbl">Quand ?</div>
+      <div class="when">
+        <button class="big now" data-a="when" data-v="now">Maintenant<small>Un camion en ~20 min</small></button>
+        <button class="big plan" data-a="when" data-v="plan">Programmer<small>Jour et heure au choix · −5 %</small></button>
+      </div>
+      <div class="card"><div class="row" style="justify-content:space-between"><span class="lbl">Votre dernière vidange</span><span class="badge warn">il y a 9 mois</span></div>
+      <div style="font-size:13px;color:var(--fg-2)">Une fosse familiale se vide en moyenne tous les 8 à 12 mois. Activez le rappel pour éviter les débordements en hivernage.</div></div>
+      <div class="note">Tous les chauffeurs sont membres de l'AAAS, formés et identifiés. Les boues sont déposées dans une STBV de l'ONAS : Cambérène, Pikine, Rufisque ou Tivaouane Peulh.</div>
+    </div>`,{title:"Sëtal",sub:"Vidange & assainissement"});
+  }
+  if(c.step===1){
+    const fosse=c.svc==="fosse", res=c.svc==="reseau";
+    const ok=c.tel.replace(/\D/g,"").length>=9&&c.adresse.trim()&&(c.same||c.contactTel.replace(/\D/g,"").length>=9);
+    return phone(`<div class="scr">
+      <div class="hello" style="font-size:20px">${SVCN[c.svc]} · ${c.when==="now"?"maintenant":"programmée"}</div>
+      ${fosse?`<div class="card"><span class="lbl">Taille de la fosse</span>
+        <div class="chips">${VOLS.map(v=>`<button class="chip ${c.vol===v.v?"on":""}" data-a="vol" data-v="${v.v}">${v.l}<small>${v.v} m³</small></button>`).join("")}</div>
+        <div style="font-size:12px;color:var(--fg-3)">Vous ne savez pas ? Choisissez « Standard » : le chauffeur confirme sur place.</div></div>`:""}
+      ${res?`<div class="card"><span class="lbl">Longueur de réseau à curer</span>
+        <div class="chips">${[15,30,60,100].map(v=>`<button class="chip ${c.ml===v?"on":""}" data-a="ml" data-v="${v}">${v} m</button>`).join("")}</div></div>`:""}
+      <div class="card"><span class="lbl">Adresse de l'intervention</span>
+        <select class="inp" id="c-q" data-a="q" aria-label="Quartier">${Q.map(q=>`<option value="${q.id}" ${q.id===c.q?"selected":""}>${q.n}</option>`).join("")}</select>
+        <input class="inp" id="c-adr" data-a="adresse" value="${esc(c.adresse)}" placeholder="Adresse précise (cité, villa, rue)" aria-label="Adresse précise">
+        <input class="inp" id="c-rep" data-a="repere" value="${esc(c.repere)}" placeholder="Point de repère (mosquée, boutique, école…)" aria-label="Point de repère">
+        <div style="font-size:12px;color:var(--fg-3)">📍 Position GPS jointe à la demande</div></div>
+      <div class="card"><span class="lbl">Contacts</span>
+        <input class="inp num" id="c-tel" data-a="tel" value="${esc(c.tel)}" placeholder="Votre téléphone" aria-label="Votre téléphone" inputmode="tel">
+        <label class="tog"><input type="checkbox" id="c-same" data-a="same" ${c.same?"checked":""}><span>Je serai sur place<small>Sinon, indiquez qui appeler à l'arrivée du camion</small></span></label>
+        ${c.same?"":`<input class="inp" id="c-cn" data-a="contactNom" value="${esc(c.contactNom)}" placeholder="Nom de la personne sur place" aria-label="Nom de la personne sur place">
+        <input class="inp num" id="c-ct" data-a="contactTel" value="${esc(c.contactTel)}" placeholder="Téléphone de la personne sur place" aria-label="Téléphone sur place" inputmode="tel">`}</div>
+      ${c.when==="plan"?`<div class="card"><span class="lbl">Créneau</span><div class="row">
+        <input class="inp" type="date" id="c-date" data-a="date" value="${c.date}" aria-label="Date">
+        <select class="inp" id="c-h" data-a="heure" aria-label="Heure">${["07:00","09:00","11:00","15:00","17:00"].map(h=>`<option ${h===c.heure?"selected":""}>${h}</option>`).join("")}</select></div></div>`:""}
+      <div class="card"><span class="lbl">Accès</span>
+        <label class="tog"><input type="checkbox" id="c-ru" data-a="ruelle" ${c.ruelle?"checked":""}><span>Ruelle étroite<small>Un gros camion ne peut pas passer</small></span></label>
+        <label class="tog"><input type="checkbox" id="c-tu" data-a="tuyau" ${c.tuyau?"checked":""}><span>Fosse loin de la rue<small>Plus de 30 m entre le camion et la fosse</small></span></label>
+      </div>
+    </div>
+    <div class="foot"><button class="cta or" data-a="search" id="btn-search" ${ok?"":"disabled"}>${ok?"Trouver un camion · estimation "+F(P.total):"Complétez l'adresse et les contacts"}</button></div>`,{title:"Votre demande",sub:"Étape 1 sur 4",back:"go:0"});
+  }
+  if(c.step===2){
+    const list=candidates(c), shown=Math.ceil(c.scan*DRV.length);
+    return phone(`<div class="scr">
+      <div class="radar"><span></span><span></span><span></span><b>📍</b></div>
+      <div style="text-align:center"><div class="hello" style="font-size:19px">Recherche des camions connectés</div>
+        <div style="font-size:12.5px;color:var(--fg-3)">${esc(P.q.n)} · rayon de ${RAYON} km · ${DRV.length} téléphones chauffeurs actifs</div></div>
+      <div class="stack" id="scanlist" style="gap:6px">${DRV.slice(0,shown).map(d=>{const e=list.find(x=>x.d.id===d.id);return `<div class="scanrow ${e&&e.ok?"":"off"}"><span class="av sm" style="background:${d.col}">${d.ini}</span><span style="flex:1;min-width:0"><b>${d.n}</b><small>${d.truck} ${d.cap} m³ · ${e.km.toFixed(1).replace(".",",")} km</small></span><span class="num pts">${f(d.pts)} pts</span><span class="badge ${e.ok?"ok":""}">${e.ok?"Éligible":e.why}</span></div>`}).join("")}</div>
+      ${L.on&&L.cur&&L.cur.status==="attribuee"&&L.chf[L.cur.drv]?`<div class="note ok" id="waitdrv">Demande envoyée à <b>${esc(L.chf[L.cur.drv].n)}</b>. ${isHuman(L.cur.drv)?"Son téléphone est connecté : il étudie la demande et propose son prix.":"Chauffeur simulé : réponse automatique dans quelques secondes."}</div>`:""}
+      <div class="note">Règle d'attribution : parmi les camions libres, assez grands et à moins de ${RAYON} km, le chauffeur qui a <b>le plus de points</b> est servi en premier.</div>
+    </div>`,{title:"Attribution",sub:"Étape 2 sur 4",back:"go:1"});
+  }
+  if(c.step===3){
+    const est=P.total, prop=proposed(est), diff=prop-est;
+    return phone(`<div class="scr">
+      <div class="note ok">✓ Camion attribué automatiquement · ${f(D.pts)} points, ${c.refused.length?"chauffeur suivant après votre refus":"meilleur score de votre zone"}</div>
+      <div class="card" style="gap:10px">
+        <div class="row" style="gap:12px;align-items:center">${portrait(D)}
+          <div style="min-width:0"><b style="font-size:17px">${esc(D.n)}</b><div style="font-size:12.5px;color:var(--fg-2)"><span class="stars">${stars(D.note)}</span> ${D.note} · ${D.nb} vidanges</div>
+          <div class="num" style="font-size:13px;font-weight:600">${D.tel}</div><span class="badge bl">Photo vérifiée AAAS</span></div></div>
+        <div class="kv2"><span>Camion</span><b>${D.truck}</b><span>Plaque</span><b class="num">${D.immat}</b><span>Citerne</span><b>${D.cap} m³</b><span>Distance</span><b>${candidates(c).find(x=>x.d.id===D.id).km.toFixed(1).replace(".",",")} km · ~${D.eta} min</b><span>Dépotage</span><b>${esc(P.q.st)}</b></div>
+      </div>
+      <div class="card"><span class="lbl">Coût de l'intervention</span>
+        <div class="row" style="justify-content:space-between;font-size:13.5px"><span>Estimation de la plateforme</span><span class="num">${F(est)}</span></div>
+        ${diff?`<div class="row" style="justify-content:space-between;font-size:13.5px;color:var(--orange)"><span>Ajustement du chauffeur</span><span class="num">${diff>0?"+":""}${F(diff)}</span></div>
+        <div style="font-size:12px;color:var(--fg-3)">Motif : ${esc(curAdj().motif)}</div>`:`<div style="font-size:12px;color:var(--fg-3)">Le chauffeur a accepté l'estimation sans modification.</div>`}
+        <div class="row" style="justify-content:space-between;border-top:1px dashed var(--line-2);padding-top:6px"><b>Prix proposé</b><b class="num" style="font-size:22px" id="c-prop">${F(prop)}</b></div>
+        <div style="font-size:11.5px;color:var(--fg-3)">Un chauffeur peut ajuster l'estimation de 15 % au maximum, avec un motif. Au-delà, l'AAAS doit valider.</div></div>
+    </div>
+    <div class="foot stack" style="gap:8px"><button class="cta or" data-a="go" data-v="4" id="btn-accept">J'accepte ${F(prop)}</button><button class="cta ghost" data-a="refuse-drv" style="padding:10px;font-size:14px">Refuser et chercher un autre camion</button></div>`,{title:"Votre chauffeur",sub:"Étape 3 sur 4",back:"go:1"});
+  }
+  if(c.step===4){
+    const prem=D.plan==="premium", prop=proposed(P.total);
+    const opts=[["wave","Wave","#1dc8f2"],["om","Orange Money","#ff7900"],["free","Free Money","#cd1e25"],["cash","Espèces","#4a8f5b"]];
+    return phone(`<div class="scr">
+      <div class="card"><div class="row" style="justify-content:space-between"><span class="lbl">Récapitulatif</span><span class="num" style="font-weight:800">${F(prop)}</span></div>
+        <div style="font-size:13px;color:var(--fg-2)">${SVCN[c.svc]}${c.svc==="fosse"?" · "+c.vol+" m³":""} · ${esc(c.adresse)}, ${esc(P.q.n)}<br>Contact sur place : ${c.same?esc(c.nom)+" · "+esc(c.tel):esc(c.contactNom)+" · "+esc(c.contactTel)}<br>${c.when==="now"?"Dès maintenant · arrivée ~"+D.eta+" min":"Le "+dfr(c.date)+" à "+c.heure}<br>${esc(D.n)} · ${D.truck} · ${D.immat}</div></div>
+      <div class="lbl">Paiement</div>
+      <div class="pay">${opts.map(o=>`<button class="${c.pay===o[0]?"on":""}" data-a="pay" data-v="${o[0]}" ${prem&&o[0]==="cash"?"disabled style='opacity:.4'":""}><i style="background:${o[2]}">${o[1].slice(0,2).toUpperCase()}</i>${o[1]}</button>`).join("")}</div>
+      ${prem?`<div class="note ok">🔒 <b>Paiement sécurisé AAAS.</b> L'argent est bloqué et versé au chauffeur seulement après le dépotage en station et votre confirmation.</div>`
+           :`<div class="note">Ce chauffeur est en formule <b>Basique</b> : vous le payez directement à la fin. Le prix validé ici reste la référence AAAS en cas de litige.</div>`}
+      <div class="card"><span class="lbl">Code de sécurité</span><div class="code">4827</div><div style="font-size:12px;color:var(--fg-3)">${c.same?"Donnez":"Envoyé par SMS à "+esc(c.contactNom)+". Il le donnera"} au chauffeur à son arrivée.</div></div>
+    </div>
+    <div class="foot"><button class="cta or" data-a="confirm" id="btn-confirm">${prem?"Payer "+F(prop)+" et lancer l'intervention":"Lancer l'intervention"}</button></div>`,{title:"Validation",sub:"Étape 4 sur 4",back:"go:3"});
+  }
+  if(c.step===5){
+    const ST=["Intervention lancée","Chauffeur en route","Arrivé sur place","Vidange en cours","Transport vers la STBV","Dépotage confirmé"];
+    const SUB=[`${esc(D.n)} est prévenu`,`Position mise à jour toutes les 5 s`,`Code 4827 vérifié · ${c.same?esc(c.nom):esc(c.contactNom)} prévenu`,`${c.svc==="fosse"?c.vol+" m³ en cours de pompage":"Travaux en cours"}`,`${esc(P.q.st)} · trajet suivi`,"Entrée en station et QR scannés"];
+    const t=c.track, leg=t>=4?2:1, pg=leg===2?c.prog2:(t>=2?1:c.prog1);
+    return phone(`<div class="scr">
+      <div class="map">${mapSvg("cm",leg,pg)}</div>
+      <div class="row" style="justify-content:space-between;font-size:12.5px">
+        ${t<=1?`<span class="badge or">● En direct</span><span><b class="num" id="cm-eta">${Math.max(1,Math.ceil((1-c.prog1)*D.eta))} min</b> · <span class="num" id="cm-dist">${((1-c.prog1)*4.2).toFixed(1).replace(".",",")} km</span></span>`
+        :t===4?`<span class="badge ok">● Vers la station</span><span class="num" id="cm-eta">${q2(P)}</span>`
+        :t===5?`<span class="badge ok">Trajet complet enregistré</span><span>${esc(P.q.st)}</span>`
+        :`<span class="badge bl">Sur place</span><span>Arrivée détectée par GPS</span>`}
+      </div>
+      <div class="card" style="flex-direction:row;align-items:center;gap:10px">${portrait(D,40)}
+        <div style="flex:1;min-width:0"><b>${esc(D.n)}</b><div style="font-size:12px;color:var(--fg-3)">${D.truck} · ${D.immat}</div></div>
+        <span class="badge bl num">${D.tel}</span></div>
+      <ul class="tl">${ST.map((s,i)=>`<li class="${i<t?"done":i===t?"cur":""}"><span class="pt">${i<t?"✓":""}</span><span><b>${s}</b><small>${i<=t?SUB[i]:""}</small></span></li>`).join("")}</ul>
+    </div>
+    <div class="foot">${t<5?`<button class="cta ghost" data-a="track" id="btn-track">${t===1||t===4?"Accélérer la simulation →":"Simuler l'étape suivante →"}</button>`:`<button class="cta or" data-a="go" data-v="6" id="btn-final">Voir la notification finale</button>`}</div>`,{title:"Suivi en direct",sub:"Commande AAAS-VD-004812",back:"go:4"});
+  }
+  if(c.step===6){
+    const prem=D.plan==="premium", prop=proposed(P.total), diff=prop-P.total;
+    const payL={wave:"Wave",om:"Orange Money",free:"Free Money",cash:"Espèces"}[c.pay];
+    const Qs=[["heure","Le chauffeur est-il arrivé à l'heure ?"],["propre","Le travail a-t-il été fait proprement ?"],["prix","Le prix annoncé a-t-il été respecté ?"]];
+    const pts=gain(c);
+    return phone(`<div class="scr">
+      <div class="notif" id="notif"><img src="${LOGO}" alt=""><div><b>Sëtal · maintenant</b><span>Dépotage confirmé à la ${esc(P.q.st)} à 14:58. Votre fosse est vidée, votre reçu est prêt.</span></div></div>
+      <div class="lbl">Photo de la fosse après intervention</div>
+      <div class="photo">${c.photo?`<img src="${c.photo}" alt="Photo envoyée">`:pitSvg()}<span class="stamp">14:32 · GPS 14.7645 N 17.4381 O · ${esc(D.n)}</span></div>
+      <label class="cta ghost" style="font-size:13px;padding:9px;cursor:pointer">Essayer avec votre propre photo<input type="file" id="c-ph" accept="image/*" hidden data-a="photo"></label>
+      ${(()=>{const an=L.on&&L.cur?(L.cur.anomalies||[]):["Fissure sur la dalle"];return an.length?`<div class="anom">⚠️ <span><b>Anomalie signalée : ${esc(an.join(", ").toLowerCase())}.</b> Faites vérifier la fosse par un maçon avant l'hivernage.</span></div>`:`<div class="note ok">Aucune anomalie signalée par le chauffeur.</div>`})()}
+      <div class="card" id="survey">${c.rated?`<div style="text-align:center" id="thanks"><b>Merci ${esc(c.nom)} !</b><div style="font-size:13px;color:var(--fg-2)">${esc(D.n.split(" ")[0])} gagne <b class="num">+${pts} points</b> (total ${f(D.pts)}). Les chauffeurs les mieux notés sont servis en priorité.</div></div>
+        <label class="tog"><input type="checkbox" id="c-rap" data-a="rappel" ${c.rappel?"checked":""}><span>Me rappeler la prochaine vidange<small>SMS vers le ${esc(iso(270).split("-").reverse().join("/"))}</small></span></label>`
+        :`<span class="lbl">Enquête rapide · 20 secondes</span>
+        ${Qs.map(q=>`<div class="row" style="justify-content:space-between;font-size:13.5px;gap:10px"><span>${q[1]}</span><span class="seg2"><button class="${c.sv[q[0]]===true?"on":""}" data-a="sv" data-v="${q[0]}:1">Oui</button><button class="${c.sv[q[0]]===false?"on no":""}" data-a="sv" data-v="${q[0]}:0">Non</button></span></div>`).join("")}
+        <div class="rate">${[1,2,3,4,5].map(n=>`<button class="${c.rating>=n?"on":""}" data-a="rate" data-v="${n}" aria-label="${n} étoiles">★</button>`).join("")}</div>
+        <textarea class="inp" id="c-com" data-a="comment" rows="2" placeholder="Un commentaire ? (facultatif)">${esc(c.comment)}</textarea>
+        <button class="cta" data-a="send-rate" id="btn-rate" ${c.rating?"":"disabled"}>Envoyer</button>`}</div>
+      <div class="rcpt">
+        <div class="hd"><img src="${LOGO}" alt=""><div><b>Reçu AAAS-VD-2026-004812</b><div style="font-size:11.5px;color:var(--fg-3)">${dfr(iso(0))} · ${esc(D.n)} · ${D.immat}</div></div></div>
+        ${P.L.map(l=>`<div class="ln"><span>${esc(l.l)}</span><span>${f(l.v)}</span></div>`).join("")}
+        ${P.M.map(m=>`<div class="ln"><span>${esc(m.l)}</span><span>${m.v>0?"+":""}${f(m.v)}</span></div>`).join("")}
+        ${diff?`<div class="ln"><span>Ajustement chauffeur validé</span><span>${diff>0?"+":""}${f(diff)}</span></div>`:""}
+        <div class="ln tot"><span>Total · ${payL}</span><span id="rcpt-total">${f(prop)} F</span></div>
+        <div class="qr"><div class="q" data-qr="https://aaas-sn.com/recu/AAAS-VD-2026-004812"></div><div style="font-size:11.5px;color:var(--fg-3)">${prem?"Payé à la plateforme AAAS, versé au chauffeur après dépotage.":"Payé directement au chauffeur (formule Basique)."}<br>Dépotage : ${esc(P.q.st)}. Scannez pour vérifier le reçu.</div></div>
+      </div>
+      <button class="cta ghost" data-a="restart" style="margin-top:8px">Nouvelle demande</button>
+    </div>`,{title:"Intervention terminée",sub:"Notification finale",back:"go:5"});
+  }
+}
+/* ---------- attribution ---------- */
+const RAYON=8;
+function candidates(c){
+  const q=Q.find(x=>x.id===c.q)||Q[0];
+  return DRV.map((d,i)=>{
+    const km=Math.max(0.6,d.base+((q.a*7+i*3)%5)*0.4);
+    let ok=true,why="";
+    if(!d.online){ok=false;why="Hors ligne"}
+    else if(d.busy){ok=false;why="En mission"}
+    else if(c.svc==="fosse"&&d.cap<c.vol){ok=false;why="Trop petit"}
+    else if(km>RAYON){ok=false;why="Trop loin"}
+    else if(c.refused.includes(d.id)){ok=false;why="Refusé"}
+    return {d,km,ok,why};
+  });
+}
+function assign(c){
+  const el=candidates(c).filter(x=>x.ok).sort((a,b)=>b.d.pts-a.d.pts||a.km-b.km);
+  return el.length?el[0].d.id:null;
+}
+function proposed(est){
+  const cap=Math.round(est*0.15/500)*500;
+  const a=Math.max(-cap,Math.min(cap,curAdj().amount));
+  return est+a;
+}
+function gain(c){
+  let p=10; if(c.rating===5)p+=5; else if(c.rating<=2)p-=10;
+  if(c.sv.heure===true)p+=3; if(c.sv.propre===true)p+=3; if(c.sv.prix===true)p+=3; if(c.sv.prix===false)p-=10;
+  return p+5; // +5 dépotage tracé
+}
+function portrait(d,sz=64){
+  return `<svg width="${sz}" height="${sz}" viewBox="0 0 64 64" role="img" aria-label="Photo de ${esc(d.n)}" style="flex:none;border-radius:50%;box-shadow:0 0 0 3px var(--surface),0 0 0 5px ${d.col}">
+   <rect width="64" height="64" fill="${d.col}" opacity=".25"/><circle cx="32" cy="25" r="12" fill="#6b4a33"/>
+   <path d="M20 22c2-8 22-8 24 0c-3-3-21-3-24 0z" fill="#2a1d14"/><path d="M8 64c2-14 12-20 24-20s22 6 24 20z" fill="${d.col}"/>
+   <path d="M26 44l6 8 6-8" fill="#fff" opacity=".85"/></svg>`;
+}
+const LEG1=[[0,158],[114,158],[114,106],[226,106],[226,54],[254,54]];
+const LEG2=[[254,54],[282,54],[282,158],[318,158]];
+function along(pts,p){
+  const seg=[];let tot=0;for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(d);tot+=d}
+  let rem=Math.max(0,Math.min(1,p))*tot;const tr=[pts[0]];let x=pts[0][0],y=pts[0][1];
+  for(let i=1;i<pts.length;i++){if(rem<=seg[i-1]){const k=seg[i-1]?rem/seg[i-1]:0;x=pts[i-1][0]+(pts[i][0]-pts[i-1][0])*k;y=pts[i-1][1]+(pts[i][1]-pts[i-1][1])*k;tr.push([x,y]);return{x,y,tr}}rem-=seg[i-1];tr.push(pts[i]);x=pts[i][0];y=pts[i][1]}
+  return{x,y,tr};
+}
+const PTS=a=>a.map(p=>(+p[0]).toFixed(1)+","+(+p[1]).toFixed(1)).join(" ");
+function cityBg(){
+  const b=[];for(let i=0;i<6;i++)for(let j=0;j<4;j++)b.push(`<rect x="${8+i*56}" y="${8+j*52}" width="44" height="40" rx="5" fill="var(--surface)" opacity=".85"/>`);
+  return `<rect width="340" height="215" fill="var(--line)"/>${b.join("")}
+   <text x="12" y="155" style="fill:var(--fg-3);font-size:7.5px;font-family:var(--f-body)">Route des Niayes</text>
+   <text x="122" y="103" style="fill:var(--fg-3);font-size:7.5px;font-family:var(--f-body)">Bd du Centenaire</text>`;
+}
+function truckG(id,x,y,col){
+  return `<g id="${id}" transform="translate(${(x-12).toFixed(1)},${(y-9).toFixed(1)})"><circle cx="12" cy="9" r="16" fill="${col||"var(--blue)"}" opacity=".2"/><rect width="24" height="17" rx="4" fill="${col||"var(--fg)"}"/><rect x="3" y="3" width="11" height="8" rx="2" fill="var(--sun)"/><circle cx="6" cy="17" r="2.6" fill="var(--fg)"/><circle cx="18" cy="17" r="2.6" fill="var(--fg)"/></g>`;
+}
+/* pre = préfixe des id ; leg = 1 (vers le client) ou 2 (vers la station) ; p = avancement 0..1 */
+function mapSvg(pre,leg,p){
+  const L=leg===2?LEG2:LEG1, pos=along(L,p), col=leg===2?"var(--ok)":"var(--blue)";
+  return `<svg viewBox="0 0 340 215" role="img" aria-label="Carte de suivi du camion">${cityBg()}
+   ${leg===2?`<polyline points="${PTS(LEG1)}" fill="none" stroke="var(--blue)" stroke-width="4" opacity=".25" stroke-linecap="round" stroke-linejoin="round"/>`:""}
+   <polyline points="${PTS(L)}" fill="none" stroke="${col}" stroke-width="4" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
+   <polyline id="${pre}-trail" points="${PTS(pos.tr)}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+   <g><circle cx="254" cy="54" r="26" fill="none" stroke="var(--orange)" stroke-dasharray="3 4" opacity=".7"/><circle cx="254" cy="54" r="12" fill="var(--orange)"/><path d="M248.5 55l5.5-5.5 5.5 5.5v6h-11z" fill="#fff"/></g>
+   <g><rect x="298" y="146" width="40" height="24" rx="6" fill="var(--ok)"/><text x="318" y="162" text-anchor="middle" style="fill:#fff;font-size:10px;font-weight:700;font-family:var(--f-body)">STBV</text></g>
+   ${truckG(pre+"-truck",pos.x,pos.y)}
+  </svg>`;
+}
+function moveMap(pre,leg,p){
+  const t=document.getElementById(pre+"-truck"),tr=document.getElementById(pre+"-trail"); if(!t) return;
+  const pos=along(leg===2?LEG2:LEG1,p);
+  t.setAttribute("transform",`translate(${(pos.x-12).toFixed(1)},${(pos.y-9).toFixed(1)})`); tr.setAttribute("points",PTS(pos.tr));
+}
+const FL={replay:null,trucks:[
+ {n:"Modou Diagne",im:"DK-3301-AX",s:"En mission",c:"var(--orange)",pts:[[58,54],[170,54],[170,158],[58,158],[58,54]],p:0.1,dur:26000,loop:true},
+ {n:"Coumba Sarr",im:"TH-3310-C",s:"Disponible",c:"var(--blue)",pts:[[114,106],[282,106],[282,158],[114,158],[114,106]],p:0.5,dur:30000,loop:true},
+ {n:"Ablaye Ndiaye",im:"DK-5540-BA",s:"Vers la station",c:"var(--ok)",pts:[[226,54],[282,54],[282,158],[318,158]],p:0.2,dur:14000,loop:false},
+ {n:"Pape Ndour",im:"DK-7702-BC",s:"En mission",c:"var(--orange)",pts:[[0,106],[114,106],[114,54],[226,54],[226,106],[0,106]],p:0.7,dur:34000,loop:true},
+ {n:"Awa Mbengue",im:"DK-1180-AZ",s:"Disponible",c:"var(--blue)",pts:[[58,158],[58,210],[340,210]],p:0.3,dur:22000,loop:false}
+]};
+const FULL=LEG1.concat(LEG2.slice(1));
+function fpos(t){const q=t.loop?t.p%1:(t.p%2<1?t.p%2:2-t.p%2);return along(t.pts,q)}
+function fleetSvg(){
+  const rp=FL.replay==null?null:along(FULL,FL.replay);
+  return `<svg viewBox="0 0 340 215" role="img" aria-label="Carte de la flotte en direct">${cityBg()}
+   <g><rect x="298" y="146" width="40" height="24" rx="6" fill="var(--ok)"/><text x="318" y="162" text-anchor="middle" style="fill:#fff;font-size:10px;font-weight:700;font-family:var(--f-body)">STBV</text></g>
+   <polyline id="fm-replay" points="${rp?PTS(rp.tr):""}" fill="none" stroke="var(--orange)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+   ${FL.trucks.map((t,i)=>{const p=fpos(t);return truckG("fm-"+i,p.x,p.y,t.c)}).join("")}
+  </svg>`;
+}
+function fleetTick(dt){
+  FL.trucks.forEach((t,i)=>{t.p+=dt/t.dur;const el=document.getElementById("fm-"+i);if(el){const p=fpos(t);el.setAttribute("transform",`translate(${(p.x-12).toFixed(1)},${(p.y-9).toFixed(1)})`)}});
+  if(FL.replay!=null&&FL.replay<1){FL.replay=Math.min(1,FL.replay+dt/9000);const r=document.getElementById("fm-replay");if(r)r.setAttribute("points",PTS(along(FULL,FL.replay).tr))}
+}
+function q2(P){const r=1-S.c.prog2;return Math.max(1,Math.ceil(r*P.q.s*2.2))+" min · "+(r*P.q.s).toFixed(1).replace(".",",")+" km"}
+function pitSvg(){
+  return `<svg viewBox="0 0 400 300" role="img" aria-label="Illustration : fosse vidée">
+   <rect width="400" height="300" fill="#b7a58a"/><rect y="0" width="400" height="300" fill="url(#gr)" opacity=".25"/>
+   <defs><radialGradient id="pit"><stop offset="0" stop-color="#1d1a16"/><stop offset=".8" stop-color="#3b342b"/><stop offset="1" stop-color="#5a5044"/></radialGradient></defs>
+   <rect x="95" y="55" width="210" height="190" rx="8" fill="#9a9183" stroke="#7d7466" stroke-width="10"/>
+   <rect x="115" y="75" width="170" height="150" rx="4" fill="url(#pit)"/>
+   <path d="M120 200 Q200 214 280 200 L280 220 L120 220Z" fill="#4a4135" opacity=".7"/>
+   <path d="M300 70 L320 120 L310 150" stroke="#5a5044" stroke-width="3" fill="none"/>
+   <text x="200" y="40" text-anchor="middle" style="fill:#3b342b;font:700 14px var(--f-body)">Illustration — la vraie photo s'affiche ici</text></svg>`;
+}
+
+function clientSide(){
+  const c=S.c,P=prix(c,S.sim);
+  const cand=candidates(c).slice().sort((a,b)=>(b.ok-a.ok)||b.d.pts-a.d.pts||a.km-b.km);
+  const best=cand.find(x=>x.ok);
+  return `<div class="side">
+   <section class="panel"><header><h3>Comment le prix est calculé</h3><span class="h">mis à jour à chaque choix dans le téléphone</span></header>
+    <div class="bd">
+     <table class="brk">${P.L.map(l=>`<tr><td>${esc(l.l)}<small>${esc(l.s)}</small></td><td>${f(l.v)} F</td></tr>`).join("")}
+     ${P.M.map(m=>`<tr class="mod"><td>${esc(m.l)}<small>${m.p>0?"+":""}${Math.round(m.p*100)} % du sous-total ${f(P.sub)} F</small></td><td>${m.v>0?"+":""}${f(m.v)} F</td></tr>`).join("")}
+     <tr class="t"><td>Estimation de la plateforme<small>arrondie aux ${T.arrondi} F, proposée au chauffeur</small></td><td>${f(P.total)} F</td></tr>
+     <tr class="mod"><td>Ajustement du chauffeur<small>${esc(curAdj().motif||"en attente")} · plafonné à ±15 %</small></td><td>${proposed(P.total)-P.total>0?"+":""}${f(proposed(P.total)-P.total)} F</td></tr>
+     <tr class="t"><td>Prix proposé au client</td><td>${f(proposed(P.total))} F</td></tr></table>
+     <div class="lbl">Simuler la demande (comme Yango aux heures de pointe)</div>
+     <div class="sim">
+      <label class="tog"><input type="checkbox" id="s-pt" data-a="sim-pointe" ${S.sim.pointe?"checked":""}><span>Forte demande<small>+15 % sur les demandes immédiates</small></span></label>
+      <label class="tog"><input type="checkbox" id="s-hv" data-a="sim-hiv" ${S.sim.hivernage?"checked":""}><span>Hivernage<small>+10 % (fosses saturées, routes difficiles)</small></span></label>
+     </div>
+    </div></section>
+   <section class="panel"><header><h3>Attribution du camion</h3><span class="h">pour la demande en cours · ${esc(P.q.n)}${c.svc==="fosse"?" · "+c.vol+" m³":""}</span></header>
+    <div class="bd" style="padding:0"><div class="tbl-wrap"><table class="tb">
+     <thead><tr><th>Rang</th><th>Chauffeur</th><th class="r">Points</th><th class="r">Distance</th><th>Statut</th></tr></thead><tbody>
+     ${cand.map((x,i)=>`<tr${best&&x.d.id===best.d.id?' style="background:var(--ok-soft)"':""}><td class="num">${x.ok?"#"+(i+1):"—"}</td><td><b>${x.d.n}</b><br><small class="muted">${x.d.truck} ${x.d.cap} m³ · ${x.d.immat}</small></td><td class="r num">${f(x.d.pts)}</td><td class="r num">${x.km.toFixed(1).replace(".",",")} km</td><td>${x.ok?(best&&x.d.id===best.d.id?'<span class="pill ok">Attribué en priorité</span>':'<span class="pill bl">En réserve</span>'):`<span class="pill">${x.why}</span>`}</td></tr>`).join("")}
+     </tbody></table></div>
+     <div style="padding:12px 18px 16px" class="stack">
+      <div class="callout bl">Le système interroge les téléphones chauffeurs connectés, écarte ceux qui sont hors ligne, en mission, trop loin (plus de ${RAYON} km) ou trop petits, puis attribue la demande au chauffeur qui a <b>le plus de points</b>. S'il refuse ou si le client le refuse, la demande passe au suivant.</div>
+      <div class="lbl">Barème des points</div>
+      <div class="tbl-wrap"><table class="tb"><tbody>
+       <tr><td>Mission terminée</td><td class="r num">+10</td><td>Dépotage tracé en STBV</td><td class="r num">+5</td></tr>
+       <tr><td>Note 5 étoiles</td><td class="r num">+5</td><td>À l'heure · propre · prix respecté</td><td class="r num">+3 chacun</td></tr>
+       <tr><td>Note de 2 étoiles ou moins</td><td class="r num">−10</td><td>Prix non respecté selon le client</td><td class="r num">−10</td></tr>
+       <tr><td>Annulation après acceptation</td><td class="r num">−15</td><td>Dépotage non tracé</td><td class="r num">−30</td></tr>
+      </tbody></table></div>
+     </div></div></section>
+   <section class="panel"><header><h3>Stations de dépotage</h3><span class="h">STBV situées dans les STEP de l'ONAS</span></header>
+    <div class="bd"><ul class="why">
+     ${STATIONS.map(s=>`<li><b>${s.n}</b>${s.d}</li>`).join("")}
+    </ul><div class="note">La station est choisie automatiquement selon le quartier (la plus proche). La mission ne se clôture qu'après le scan du QR de la station et la détection GPS de l'entrée du camion.</div></div></section>
+  </div>`;
+}
+
+/* ================= VIDANGEUR ================= */
+function driverScreen(){
+  if(L.on) return driverLive();
+  const d=S.d, prem=d.plan==="premium";
+  const reqE=prix(S.c,S.sim).total, reqP=proposed(reqE), RQ=prix(S.c,S.sim).q, me=DRV[0];
+  const nav=`<div class="navb">${[["home","Accueil",I.home],["mission","Mission",I.truck],["soir",prem?"État du soir":"Journal",I.moon],["abo","Abonnement",I.user]].map(n=>`<button class="${d.view===n[0]?"on":""}" data-a="dview" data-v="${n[0]}">${n[2]}${n[1]}</button>`).join("")}</div>`;
+  const planbar=`<div class="planbar"><button class="${!prem?"on":""}" data-a="plan" data-v="basique">Basique · 25 000 F/mois</button><button class="pr ${prem?"on":""}" data-a="plan" data-v="premium">Premium · 10 %</button></div>`;
+  let inner="";
+  if(d.view==="home"){
+    inner=`<div class="scr">${planbar}
+     <div class="online"><div><b>${d.online?"En ligne":"Hors ligne"}</b><div style="font-size:12px;color:var(--fg-3)">Mercedes Axor 10 m³ · DK-3301-AX</div></div>
+      <label class="tog" style="flex:none"><input type="checkbox" id="d-on" data-a="online" ${d.online?"checked":""}></label></div>
+     <div class="kp"><div><b class="num">3</b><small>missions</small></div><div><b class="num">${f(prem?84500:79000)}</b><small>F aujourd'hui</small></div><div><b>4,8</b><small>★ note</small></div></div>
+     ${d.online&&d.req?`<div class="req"><div class="row" style="justify-content:space-between"><span class="badge or">Nouvelle demande · 0:24</span><span class="badge ok">Vous êtes prioritaire</span></div>
+       <div style="font-size:14px"><b>${SVCN[S.c.svc]}${S.c.svc==="fosse"?" "+S.c.vol+" m³":""} · ${esc(S.c.nom)}</b><br><span style="color:var(--fg-2);font-size:13px">${esc(S.c.adresse)}, ${esc(RQ.n)} · à 2,1 km<br>Dépotage : ${esc(RQ.st)} (${RQ.s} km)</span></div>
+       <div class="adj"><div class="row" style="justify-content:space-between;font-size:13px"><span>Estimation AAAS</span><span class="num">${F(reqE)}</span></div>
+        <div class="row" style="justify-content:space-between"><button class="chip" data-a="adj" data-v="-1000">− 1 000</button><b class="num" style="font-size:20px">${F(reqP)}</b><button class="chip" data-a="adj" data-v="1000">+ 1 000</button></div>
+        <select class="inp" id="d-motif" data-a="motif" aria-label="Motif de l'ajustement" style="font-size:13px;padding:6px 9px">${["Rue ensablée, manœuvre longue","Fosse plus grande que déclarée","Tuyau supplémentaire nécessaire","Accès plus simple que prévu","Client fidèle"].map(m=>`<option ${m===S.adj.motif?"selected":""}>${m}</option>`).join("")}</select>
+        <small style="color:var(--fg-3);font-size:11.5px">Ajustement possible de ±15 % avec un motif. Le client voit les deux montants avant de valider.</small></div>
+       <div class="row"><button class="cta ghost" style="flex:1;padding:11px" data-a="refuse">Refuser</button><button class="cta or" style="flex:2;padding:11px" data-a="accept">Proposer ${F(reqP)}</button></div></div>`
+      :`<div class="card" style="text-align:center;color:var(--fg-3);font-size:13.5px">${d.online?"En attente de demandes dans votre zone…":"Passez en ligne pour recevoir des demandes."}</div>`}
+     <div class="card"><div class="row" style="justify-content:space-between"><span class="lbl">Mes points</span><span class="num" style="font-weight:800">${f(me.pts)} pts</span></div>
+       <div class="bar"><i style="width:${Math.min(100,me.pts/15)}%;background:var(--orange)"></i></div>
+       <div style="font-size:12.5px;color:var(--fg-2)">${(()=>{const r=DRV.slice().sort((a,b)=>b.pts-a.pts),i=r.indexOf(me);return i===0?"Rang 1 sur "+r.length+" : vous recevez les demandes en premier.":"Rang "+(i+1)+" sur "+r.length+" dans votre zone. Encore "+f(r[i-1].pts-me.pts+1)+" points pour passer devant "+r[i-1].n+"."})()}</div></div>
+     ${prem?`<div class="card"><div class="row" style="justify-content:space-between"><span class="lbl">Boost de visibilité</span><span class="badge ok">Actif</span></div>
+       <div style="font-size:13px;color:var(--fg-2)">Vous apparaissez en tête à Parcelles, Guédiawaye et Pikine. Demandes reçues cette semaine : <b>+38 %</b> par rapport à la formule Basique.</div></div>`
+      :`<div class="lock">${I.lock}<span><b>Boost de visibilité</b> et paiement sécurisé sont réservés au Premium. <a href="#" data-a="plan" data-v="premium">Voir l'offre</a></span></div>`}
+     <div class="card"><span class="lbl">Demandes programmées</span>
+      <div style="font-size:13px">Demain 09:00 · Grand Yoff · 12 m³<br>Jeudi 15:00 · Keur Massar · 10 m³</div></div>
+    </div>`;
+  }else if(d.view==="mission"){
+    const ms=d.mstep;
+    const steps=["Aller chez le client","Arrivée : code client","Photos et anomalies","Dépotage à la station","Encaissement"];
+    const body=[
+      `<div class="map">${mapSvg("dm",1,d.prog)}</div>
+       <div class="card" style="background:var(--fg);color:var(--bg);box-shadow:none"><div class="row" style="gap:12px"><span style="font-size:30px;line-height:1" id="dm-arr">${navInstr(d.prog)[0]}</span><div><b id="dm-ins">${navInstr(d.prog)[1]}</b><div style="font-size:12px;opacity:.75" id="dm-rest">${navRest(d.prog)}</div></div></div></div>
+       <div class="card"><b>Fatou Ndiaye · Parcelles U17</b><div style="font-size:13px;color:var(--fg-2)">Repère : près de la mosquée de l'Unité 17 · fosse standard 10 m³</div>
+        ${d.nav?`<div class="note ok">Navigation en cours. Votre position est partagée avec le client et l'AAAS.</div>`:`<button class="cta" data-a="dnav">Démarrer la navigation</button>`}
+        <a class="cta ghost" style="text-decoration:none;font-size:13px;padding:9px" href="https://www.google.com/maps/dir/?api=1&destination=14.7645,-17.4381" target="_blank" rel="noopener">Ouvrir dans Google Maps</a></div>`,
+      `<div class="card"><span class="lbl">Demandez le code au client</span><input class="inp num" id="d-code" data-a="dcode" inputmode="numeric" maxlength="4" placeholder="_ _ _ _" value="${esc(d.code)}" style="font-size:22px;letter-spacing:.3em;text-align:center">
+        <div style="font-size:12px;color:var(--fg-3)">Pour la démo, le code est 4827.</div><button class="cta" data-a="mcode">Valider l'arrivée</button></div>`,
+      `<div class="card"><span class="lbl">Photos obligatoires</span><div class="row"><span class="badge ok">✓ Avant</span><span class="badge ok">✓ Après (fosse vide)</span></div>
+        <span class="lbl">Anomalies constatées</span>${["Fissure sur la dalle","Fosse remplie de sable","Remontée de la nappe","Tampon cassé ou absent"].map(a=>`<label class="tog"><input type="checkbox" id="d-an-${a.length}" data-a="anom" data-v="${a}" ${d.anoms.includes(a)?"checked":""}><span>${a}</span></label>`).join("")}
+        <button class="cta" data-a="mnext">Terminer le pompage</button></div>`,
+      `<div class="card"><span class="lbl">STBV de Cambérène</span><div style="font-size:13px;color:var(--fg-2)">Scannez le QR code affiché à l'entrée de la station. La mission ne se clôture qu'après le dépotage.</div>
+        <div class="row" style="justify-content:center;padding:6px"><div class="q" style="background:#fff;padding:6px;border-radius:10px;line-height:0" data-qr="ONAS-STBV-CAMBERENE-POSTE-2"></div></div>
+        <button class="cta" data-a="mnext">J'ai scanné le QR de la station</button></div>`,
+      prem?`<div class="card"><div class="note ok">Payé par le client via Wave : <b>${F(reqP)}</b>. Montant sécurisé par l'AAAS.</div>
+        <div style="font-size:13px;color:var(--fg-2)">Versement ce soir à 20 h sur votre Wave : <b>${F(reqP*0.9)}</b> (commission 10 % déduite).</div><button class="cta or" data-a="mdone">Clôturer la mission</button></div>`
+          :`<div class="card"><span class="lbl">Encaissez auprès du client</span><div class="price"><b class="num">${f(reqP)}</b><span>FCFA</span></div>
+        <div class="chips">${["Espèces","Wave","Orange Money"].map(x=>`<button class="chip ${d.cash===x?"on":""}" data-a="dcash" data-v="${x}">${x}</button>`).join("")}</div>
+        <button class="cta or" data-a="mdone">J'ai encaissé · clôturer</button></div>`
+    ];
+    inner=`<div class="scr"><ul class="tl">${steps.map((s,i)=>`<li class="${i<ms?"done":i===ms?"cur":""}"><span class="pt">${i<ms?"✓":""}</span><span><b>${s}</b></span></li>`).join("")}</ul>
+      ${ms<5?body[ms]:`<div class="done-hero"><div class="ck">${I.check}</div><b>Mission clôturée</b><span style="font-size:13px;color:var(--fg-3)">Reçu envoyé au client par SMS et WhatsApp.</span><button class="cta ghost" data-a="mreset">Nouvelle mission (démo)</button></div>`}</div>`;
+  }else if(d.view==="soir"){
+    const M=[["08:10","Thiaroye · 8 m³",24000,"Wave"],["11:30","Guédiawaye · 10 m³",28500,"Orange Money"],["15:05","Parcelles · 10 m³",26000,"Wave"]];
+    const brut=M.reduce((a,m)=>a+m[2],0), com=brut*T.commission;
+    if(prem){
+      const carb=21000, dep=3*1500, aide=6000;
+      inner=`<div class="scr"><div class="hello" style="font-size:20px">État du ${dfr(iso(0))}</div>
+       <div class="card"><table class="mini"><tr><th>Heure</th><th>Mission</th><th class="r">Montant</th></tr>
+        ${M.map(m=>`<tr><td class="num">${m[0]}</td><td>${m[1]}<br><small class="muted">${m[3]}</small></td><td class="r">${f(m[2])}</td></tr>`).join("")}
+        <tr class="t"><td></td><td>Chiffre d'affaires</td><td class="r">${f(brut)}</td></tr>
+        <tr><td></td><td>Commission AAAS 10 %</td><td class="r">−${f(com)}</td></tr>
+        <tr class="t"><td></td><td>Versé à 20:00 sur Wave</td><td class="r">${f(brut-com)}</td></tr></table></div>
+       <div class="card"><span class="lbl">Coûts du jour (saisis ou estimés)</span><table class="mini">
+        <tr><td>Carburant (photo du ticket)</td><td class="r">−${f(carb)}</td></tr><tr><td>Redevance dépotage STBV</td><td class="r">−${f(dep)}</td></tr><tr><td>Aide-vidangeur</td><td class="r">−${f(aide)}</td></tr>
+        <tr class="t"><td>Marge nette du jour</td><td class="r">${f(brut-com-carb-dep-aide)}</td></tr></table></div>
+       <div class="card"><span class="lbl">Journal de caisse · 7 jours</span>${weekBars()}</div>
+       <button class="cta ghost" data-a="toast" data-v="État financier de septembre envoyé sur votre WhatsApp (démo).">Recevoir mon état financier du mois</button></div>`;
+    }else{
+      inner=`<div class="scr"><div class="hello" style="font-size:20px">Journal du ${dfr(iso(0))}</div>
+       <div class="card"><table class="mini"><tr><th>Heure</th><th>Client</th><th class="r">Estimation</th></tr>
+        ${M.map(m=>`<tr><td class="num">${m[0]}</td><td>${m[1]}</td><td class="r">${f(m[2])}</td></tr>`).join("")}</table>
+        <div style="font-size:12px;color:var(--fg-3)">Montants indicatifs : vous encaissez vous-même, la plateforme ne voit pas les paiements.</div></div>
+       <div class="lock">${I.lock}<span><b>Versement automatique, journal de caisse et état financier</b> sont inclus dans le Premium. Utile pour un dossier de crédit camion à la BNDE ou à la DER.</span></div></div>`;
+    }
+  }else{
+    inner=`<div class="scr">${planbar}
+     ${prem?`<div class="card"><span class="lbl">Formule Premium</span><div class="price"><b>10 %</b><span>par mission</span></div><div style="font-size:13px;color:var(--fg-2)">Pas d'abonnement fixe. Vous ne payez que lorsque vous travaillez.</div></div>`
+           :`<div class="card"><span class="lbl">Formule Basique</span><div class="price"><b class="num">25 000</b><span>F / mois</span></div><div style="font-size:13px;color:var(--fg-2)">Prochaine échéance le 01/11 · payer par Wave ou Orange Money.</div><button class="cta" data-a="toast" data-v="Demande de paiement Wave envoyée (démo).">Payer mon abonnement</button></div>`}
+     <div class="card"><span class="lbl">Inclus</span>${[["Recevoir les demandes et contacter le client",1,1],["Estimation automatique du prix",1,1],["Guidage GPS et itinéraire",1,1],["Boost de visibilité (en tête de liste)",0,1],["Prix ferme garanti au client",0,1],["Encaissement par la plateforme et versement chaque soir",0,1],["État du soir, journal de caisse, état financier",0,1]].map(r=>`<div class="row" style="font-size:13px;justify-content:space-between"><span>${r[0]}</span><span class="${(prem?r[2]:r[1])?"yes":"no"}">${(prem?r[2]:r[1])?"✓":"—"}</span></div>`).join("")}</div>
+     <div class="card"><span class="lbl">Mon dossier membre AAAS</span>${[["Carte de membre 2026","ok"],["Permis C","ok"],["Carte grise et assurance","ok"],["Visite technique","warn"],["Formation ISO 24521","ok"]].map(r=>`<div class="row" style="justify-content:space-between;font-size:13px"><span>${r[0]}</span><span class="badge ${r[1]}">${r[1]==="ok"?"À jour":"Expire dans 12 j"}</span></div>`).join("")}</div>
+    </div>`;
+  }
+  return phone(inner,{title:"Sëtal Pro",sub:"Espace vidangeur · Modou Diagne",nav});
+}
+function navInstr(p){
+  if(p<0.3) return ["↑","Continuez sur la route des Niayes"];
+  if(p<0.45) return ["↰","Dans 200 m, tournez à gauche"];
+  if(p<0.75) return ["↑","Suivez le boulevard du Centenaire"];
+  if(p<0.97) return ["↱","Tournez à droite vers l'Unité 17"];
+  return ["◉","Vous êtes arrivé"];
+}
+function navRest(p){const m=Math.max(1,Math.ceil((1-p)*14));return ((1-p)*4.2).toFixed(1).replace(".",",")+" km · "+m+" min · arrivée vers 09:"+String(41+m).padStart(2,"0")}
+function weekBars(){
+  const v=[62000,0,88500,54000,79000,96000,78500],days=["L","M","M","J","V","S","D"],mx=100000;
+  return `<svg class="chart" viewBox="0 0 300 120" role="img" aria-label="Encaissements des 7 derniers jours">
+   ${[0,50000,100000].map(g=>`<line class="gl" x1="30" x2="298" y1="${100-g/mx*86}" y2="${100-g/mx*86}"/><text x="26" y="${104-g/mx*86}" text-anchor="end">${g/1000}k</text>`).join("")}
+   ${v.map((x,i)=>`<rect x="${40+i*37}" y="${100-x/mx*86}" width="24" height="${Math.max(0,x/mx*86)}" rx="4" fill="${i===6?"var(--orange)":"var(--blue)"}"/><text x="${52+i*37}" y="115" text-anchor="middle">${days[i]}</text>`).join("")}
+  </svg>`;
+}
+function driverSide(){
+  const k=S.k;
+  const caB=k.missions*k.prix, netB=caB-T.abo;
+  const caP=Math.round(k.missions*(1+k.boost/100))*k.prix, comP=caP*T.commission, netP=caP-comP;
+  const best=netP>netB?"P":"B";
+  const seuil=T.abo/T.commission;
+  const mx=Math.max(caB,caP)||1;
+  return `<div class="side">
+   <section class="panel"><header><h3>Basique ou Premium : le calculateur du chauffeur</h3><span class="h">à montrer lors de l'enrôlement</span></header>
+    <div class="bd">
+     <div class="sim">
+      <div class="slider"><label for="k-m">Missions par mois <b>${k.missions}</b></label><input type="range" id="k-m" min="8" max="80" value="${k.missions}" data-a="k" data-v="missions"></div>
+      <div class="slider"><label for="k-p">Prix moyen d'une mission <b>${f(k.prix)} F</b></label><input type="range" id="k-p" min="15000" max="50000" step="500" value="${k.prix}" data-a="k" data-v="prix"></div>
+      <div class="slider"><label for="k-b">Missions en plus grâce au boost <b>+${k.boost} %</b></label><input type="range" id="k-b" min="0" max="60" value="${k.boost}" data-a="k" data-v="boost"></div>
+     </div>
+     <div class="cmp">
+      <div class="${best==="B"?"best":""}"><span class="lbl">Basique</span><span class="v num">${f(netB)} F</span><span class="s">${k.missions} missions · CA ${f(caB)} F − abonnement 25 000 F</span>
+        <div class="hbar"><i style="width:${netB/mx*100}%;background:var(--blue)"></i><i style="width:${T.abo/mx*100}%;background:var(--line-2)"></i></div>${best==="B"?'<span class="badge ok">Plus rentable ici</span>':""}</div>
+      <div class="${best==="P"?"best":""}"><span class="lbl">Premium</span><span class="v num">${f(netP)} F</span><span class="s">${Math.round(k.missions*(1+k.boost/100))} missions · CA ${f(caP)} F − commission ${f(comP)} F</span>
+        <div class="hbar"><i style="width:${netP/mx*100}%;background:var(--orange)"></i><i style="width:${comP/mx*100}%;background:var(--line-2)"></i></div>${best==="P"?'<span class="badge ok">Plus rentable ici</span>':""}</div>
+     </div>
+     <div class="callout">À volume égal, le Premium coûte plus cher que le Basique dès <b>${f(seuil)} F</b> de chiffre d'affaires mensuel sur la plateforme, soit environ ${Math.ceil(seuil/k.prix)} missions. Il doit donc se vendre sur ce qu'il apporte : plus de demandes (boost), zéro impayé, versement chaque soir, et une comptabilité qui ouvre l'accès au crédit pour renouveler le camion.</div>
+     <div class="callout bl"><b>Piste à étudier :</b> plafonner la commission Premium (par exemple 120 000 F/mois) ou la rendre dégressive (10 % jusqu'à 1 M F, 7 % au-delà). Les meilleurs chauffeurs restent alors en Premium au lieu de repasser en Basique et d'encaisser hors plateforme.</div>
+    </div></section>
+   <section class="panel"><header><h3>Ce que l'application fait à la place du chauffeur</h3></header>
+    <div class="bd"><ul class="why">
+     <li><b>Une demande, un bouton</b>Prix, distance et station de dépotage visibles avant d'accepter. Gros boutons, utilisables avec des gants.</li>
+     <li><b>Clôture en 5 étapes</b>GPS, code client, photos, scan de la station, encaissement. Chaque étape alimente le reçu.</li>
+     <li><b>État du soir (Premium)</b>Chaque soir à 20 h : missions, commission, versement Wave, coûts saisis par photo de ticket et marge nette.</li>
+     <li><b>Dossier membre</b>Permis, carte grise, assurance, visite technique et formations, avec alertes avant expiration.</li>
+    </ul></div></section>
+  </div>`;
+}
+
+/* ================= CHEF DE GARAGE ================= */
+function garageScreen(){
+  const g=S.g;
+  const nav=`<div class="navb">${[["home","Tableau",I.home],["new","Nouvelle commande",I.plus],["qr","Mon QR",I.qr]].map(n=>`<button class="${g.view===n[0]?"on":""}" data-a="gview" data-v="${n[0]}">${n[2]}${n[1]}</button>`).join("")}</div>`;
+  let inner="";
+  if(g.view==="home"){
+    const fleet=[["Modou Diagne","DK-3301-AX","En mission","or"],["Coumba Sarr","TH-3310-C","Disponible","ok"],["Pape Ndour","DK-7702-BC","Disponible","ok"],["Ibou Faye","DK-6620-BB","Au garage","warn"]];
+    inner=`<div class="scr">
+     <div class="card" style="background:linear-gradient(135deg,var(--blue),#2a7fc0);color:#fff;box-shadow:none"><span class="lbl" style="color:rgba(255,255,255,.8)">Mandats d'octobre</span>
+      <div class="price"><b class="num" style="color:#fff">${f(g.mandat)}</b><span style="color:#fff">FCFA</span></div>
+      <div style="font-size:12.5px;opacity:.9">${g.nbApport} commandes apportées · prochain versement Wave ce soir à 20 h</div></div>
+     <div class="card"><div class="row" style="justify-content:space-between"><span class="lbl">Commande à attribuer</span><span class="badge or">Keur Massar · 12 m³</span></div>
+      <div style="font-size:13px;color:var(--fg-2)">Aucun chauffeur proche n'a accepté depuis 4 min. Vous pouvez l'attribuer à l'un de vos camions.</div>
+      <button class="cta" data-a="toast" data-v="Commande attribuée à Coumba Sarr (démo). Bonus flotte enregistré.">Attribuer à Coumba Sarr</button></div>
+     <div class="card"><span class="lbl">Mes camions rattachés</span>${fleet.map(r=>`<div class="row" style="justify-content:space-between;font-size:13px"><span><b>${r[0]}</b> <span class="muted">${r[1]}</span></span><span class="badge ${r[3]}">${r[2]}</span></div>`).join("")}</div>
+     <div class="card"><span class="lbl">Classement des garages · Pikine</span><div style="font-size:13px">1. Garage Thiaroye Gare · <b>31</b> commandes<br>2. Garage Keur Massar Marché · 27<br>3. Garage Pikine Icotaf · 19</div><span class="badge ok">Bonus du mois en jeu : 50 000 F</span></div>
+    </div>`;
+  }else if(g.view==="new"){
+    const P=prix({svc:"fosse",vol:g.vol,q:g.q,when:"now",ruelle:false,tuyau:false},S.sim);
+    inner=`<div class="scr">
+     <div class="note">Pour les clients qui appellent ou passent au garage sans smartphone. Vous saisissez, le client reçoit un SMS avec le prix et confirme.</div>
+     <div class="card"><span class="lbl">Téléphone du client</span><input class="inp num" id="g-tel" data-a="gtel" value="${esc(g.tel)}">
+      <span class="lbl">Quartier</span><select class="inp" id="g-q" data-a="gq">${Q.map(q=>`<option value="${q.id}" ${q.id===g.q?"selected":""}>${q.n}</option>`).join("")}</select>
+      <span class="lbl">Taille de la fosse</span><div class="chips">${VOLS.map(v=>`<button class="chip ${g.vol===v.v?"on":""}" data-a="gvol" data-v="${v.v}">${v.l}<small>${v.v} m³</small></button>`).join("")}</div></div>
+     <div class="card"><div class="row" style="justify-content:space-between"><span>Prix AAAS pour le client</span><b class="num">${F(P.total)}</b></div>
+      <div class="row" style="justify-content:space-between;color:var(--ok)"><span>Votre mandat (5 %)</span><b class="num">+${F(P.total*T.mandat)}</b></div></div>
+     <button class="cta or" data-a="gsend">Envoyer le lien au client par SMS</button>
+     ${g.sent?`<div class="note ok">${g.sent} commande${g.sent>1?"s":""} saisie${g.sent>1?"s":""} aujourd'hui. Le mandat est crédité dès que la vidange est terminée.</div>`:""}
+    </div>`;
+  }else{
+    inner=`<div class="scr" style="align-items:center;text-align:center">
+     <div class="hello" style="font-size:20px">Garage Thiaroye Gare</div>
+     <div style="background:#fff;padding:12px;border-radius:16px;line-height:0" data-qr="https://aaas-sn.com/vidange?ref=GAR-THY-07" data-size="180"></div>
+     <div class="badge bl" style="font-size:13px">Code garage GAR-THY-07</div>
+     <div style="font-size:13px;color:var(--fg-2);max-width:30ch">Affichez ce QR au garage et sur vos camions. Chaque commande passée avec ce code vous rapporte 5 % automatiquement.</div>
+     <button class="cta ghost" data-a="toast" data-v="Autocollants et affiche A3 commandés auprès de l'AAAS (démo).">Commander l'affiche et les autocollants</button>
+    </div>`;
+  }
+  return phone(inner,{title:"Sëtal Garage",sub:"Chef de garage · partenaire AAAS",nav});
+}
+function garageSide(){
+  return `<div class="side">
+   <section class="panel"><header><h3>Du mandat informel au mandat digital</h3><span class="h">garder les chefs de garage dans le jeu plutôt que contre</span></header>
+    <div class="bd">
+     <p class="lead" style="margin:0">Aujourd'hui, le chef de garage reçoit les appels, choisit le camion et prélève un mandat. Si l'application le contourne, il la combattra. Sëtal en fait un partenaire rémunéré automatiquement.</p>
+     <div class="tbl-wrap"><table class="tb"><thead><tr><th></th><th>Aujourd'hui</th><th>Avec Sëtal</th></tr></thead><tbody>
+      <tr><td><b>Rémunération</b></td><td>Mandat négocié, en espèces</td><td>5 % de chaque commande apportée, versé chaque soir par Wave</td></tr>
+      <tr><td><b>Traçabilité</b></td><td>Aucune, sources de litiges</td><td>Historique complet, relevé mensuel</td></tr>
+      <tr><td><b>Rôle</b></td><td>Intermédiaire au téléphone</td><td>Gestionnaire de flotte : rattache ses camions, attribue les commandes en attente</td></tr>
+      <tr><td><b>Clients sans smartphone</b></td><td>Passent par le garage</td><td>Toujours par le garage, qui saisit la commande pour eux</td></tr>
+      <tr><td><b>Reconnaissance</b></td><td>Informelle</td><td>Label « Garage partenaire AAAS », classement et bonus mensuel</td></tr>
+     </tbody></table></div>
+     <div class="callout"><b>Qui paie le mandat ?</b> Sur une commande Premium, il est pris sur la commission AAAS : 5 % au garage, 5 % à l'AAAS. Sur une commande Basique, le chauffeur règle le mandat de 5 % via l'application, comme il le fait déjà en espèces, mais avec un reçu.</div>
+     <div class="lbl">Le deal proposé aux chefs de garage</div>
+     <ul class="why">
+      <li><b>Bonus flotte 1 %</b>Sur le chiffre d'affaires Premium de chaque camion rattaché à son garage.</li>
+      <li><b>Priorité aux formations AAAS</b>Mécanique hydrocureur, sécurité et ISO 24521 pour ses équipes.</li>
+      <li><b>Point relais officiel</b>Le garage devient un point de commande physique, avec affiche et QR code.</li>
+      <li><b>Accès au financement</b>Dossiers de renouvellement des camions (BNDE, DER) appuyés par les relevés de la plateforme.</li>
+     </ul>
+    </div></section>
+  </div>`;
+}
+
+/* ================= AAAS PILOTAGE ================= */
+function aaasView(){
+  const W=[612,640,598,701,735,690,812,860,905,948,1010,1126];
+  const mx=1200;
+  const zones=[["Pikine / Thiaroye",312,21,"bad","Tension"],["Parcelles / Grand Yoff",268,24,"warn","Soutenue"],["Guédiawaye",201,17,"warn","Soutenue"],["Keur Massar",154,9,"bad","Tension"],["Rufisque / Mbao",118,14,"ok","Équilibrée"],["Dakar centre / Almadies",73,11,"ok","Équilibrée"]];
+  const enr=[["Mamadou Fall","Chauffeur","Permis C, CNI, carte grise","ok","Complet"],["Garage Keur Massar Marché","Chef de garage","Registre, CNI du gérant","warn","Pièce manquante"],["Aïda Diouf","Opératrice","CNI, certificat EPI","ok","Complet"],["Samba Ba","Chauffeur","Visite technique expirée","bad","Bloqué"]];
+  return `<div class="stack" style="gap:18px">
+   <div class="sec-h"><h2>Pilotage AAAS</h2><p>Octobre 2026 · tableau de bord du bureau de l'association (chiffres fictifs)</p></div>
+   ${liveBureau()}
+   <div class="g g4">
+    <div class="tile acc"><span class="l">Commandes du mois</span><span class="v num">1 126</span><span class="m">+11 % sur septembre</span></div>
+    <div class="tile"><span class="l">Camions actifs</span><span class="v num">74</span><span class="m">31 Premium · 43 Basique</span></div>
+    <div class="tile"><span class="l">Revenus plateforme</span><span class="v num">2,61<small>M F</small></span><span class="m">abonnements 1,08 M · commissions nettes 1,53 M</span></div>
+    <div class="tile"><span class="l">Dépotage tracé</span><span class="v num">98,2<small>%</small></span><span class="m">11 860 m³ scannés en station</span></div>
+   </div>
+   <section class="panel"><header><h3>Flotte en direct</h3><span class="h">positions GPS toutes les 5 s · trajets conservés 12 mois</span><div style="margin-left:auto"><button class="cta ghost" style="padding:6px 12px;font-size:13px;width:auto" data-a="replay">Rejouer le trajet de la commande 004812</button></div></header>
+    <div class="bd"><div class="g" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:start" id="fleetgrid">
+     <div class="map">${fleetSvg()}</div>
+     <div class="stack" style="font-size:13.5px">
+      <div class="legend"><span><i class="sw" style="background:var(--orange)"></i>En mission</span><span><i class="sw" style="background:var(--blue)"></i>Disponible</span><span><i class="sw" style="background:var(--ok)"></i>Vers la station</span></div>
+      ${FL.trucks.map(t=>`<div class="row" style="justify-content:space-between"><span><b>${t.n}</b> <span class="muted">${t.im}</span></span><span class="pill ${t.c==="var(--orange)"?"or":t.c==="var(--ok)"?"ok":"bl"}">${t.s}</span></div>`).join("")}
+      <div class="note">Géorepérage : arrivée chez le client et entrée en station détectées automatiquement à moins de 50 m. Un camion plein qui s'arrête hors station plus de 10 min déclenche une alerte.</div>
+     </div>
+    </div></div></section>
+   <div class="g g2">
+    <section class="panel"><header><h3>Commandes par semaine</h3><span class="h">12 dernières semaines</span></header><div class="bd">
+     <svg class="chart" viewBox="0 0 520 200" role="img" aria-label="Commandes hebdomadaires">
+      ${[0,400,800,1200].map(g=>`<line class="gl" x1="40" x2="515" y1="${175-g/mx*160}" y2="${175-g/mx*160}"/><text x="34" y="${179-g/mx*160}" text-anchor="end">${g}</text>`).join("")}
+      ${W.map((v,i)=>`<rect x="${48+i*39}" y="${175-v/mx*160}" width="28" height="${v/mx*160}" rx="5" fill="${i===11?"var(--orange)":"var(--blue)"}"/>`).join("")}
+      <text x="${62+11*39}" y="${168-W[11]/mx*160}" text-anchor="middle" style="fill:var(--fg);font-weight:600">${W[11]}</text>
+      <text x="62" y="192" text-anchor="middle">S29</text><text x="${62+11*39}" y="192" text-anchor="middle">S40</text>
+     </svg></div></section>
+    <section class="panel"><header><h3>Offre et demande par zone</h3><span class="h">sert à placer les commerciaux et à fixer la majoration</span></header><div class="bd" style="padding:0"><div class="tbl-wrap"><table class="tb">
+     <thead><tr><th>Zone</th><th class="r">Commandes</th><th class="r">Camions</th><th>État</th></tr></thead><tbody>
+     ${zones.map(z=>`<tr><td>${z[0]}</td><td class="r num">${z[1]}</td><td class="r num">${z[2]}</td><td><span class="pill ${z[3]}">${z[4]}</span></td></tr>`).join("")}
+     </tbody></table></div></div></section>
+   </div>
+   <div class="g g3">
+    <section class="panel"><header><h3>Alertes</h3></header><div class="bd">
+     <div class="anom" style="background:var(--bad-soft);color:var(--bad)">3 missions clôturées sans scan de station depuis 24 h. Suspension automatique au 2ᵉ manquement.</div>
+     <div class="anom">2 chauffeurs sous 4,0 de note moyenne. Entretien qualité à programmer.</div>
+     <div class="anom" style="background:var(--blue-soft);color:var(--blue-ink)">9 abonnements Basique arrivent à échéance le 01/11.</div>
+    </div></section>
+    <section class="panel"><header><h3>Cotisations membres</h3><span class="h">2026</span></header><div class="bd">
+     <div class="row" style="justify-content:space-between"><span>À jour</span><b class="num">96 / 128</b></div><div class="bar"><i style="width:75%"></i></div>
+     <div class="row" style="justify-content:space-between;font-size:13.5px"><span class="muted">Encaissé</span><span class="num">2 880 000 F</span></div>
+     <div class="row" style="justify-content:space-between;font-size:13.5px"><span class="muted">Relances Wave envoyées</span><span class="num">32</span></div>
+    </div></section>
+    <section class="panel"><header><h3>Formations</h3><span class="h">membres certifiés</span></header><div class="bd">
+     ${[["ISO 24521 · exploitation",58,128],["EPI et risque sanitaire",91,128],["Conduite défensive",44,128],["Premiers secours",37,128]].map(r=>`<div><div class="row" style="justify-content:space-between;font-size:13.5px"><span>${r[0]}</span><span class="num">${r[1]}</span></div><div class="bar"><i style="width:${r[1]/r[2]*100}%;background:var(--orange)"></i></div></div>`).join("")}
+    </div></section>
+   </div>
+   <section class="panel"><header><h3>Enrôlement : dernières demandes</h3><span class="h">les pièces sont vérifiées avant l'activation du compte</span></header><div class="bd" style="padding:0"><div class="tbl-wrap"><table class="tb">
+    <thead><tr><th>Nom</th><th>Profil</th><th>Pièces</th><th>Statut</th></tr></thead><tbody>
+    ${enr.map(e=>`<tr><td><b>${e[0]}</b></td><td>${e[1]}</td><td class="muted">${e[2]}</td><td><span class="pill ${e[3]}">${e[4]}</span></td></tr>`).join("")}
+    </tbody></table></div></div></section>
+  </div>`;
+}
+
+/* ================= MODÈLE & LANCEMENT ================= */
+function modelView(){
+  const ex=prix({svc:"fosse",vol:10,q:"parcelles",when:"now",ruelle:false,tuyau:false},{pointe:false,hivernage:false});
+  return `<div class="stack" style="gap:20px">
+   <div class="sec-h"><h2>Modèle et lancement</h2><p>Ce qu'il faut valider avec le bureau de l'AAAS avant le pilote</p></div>
+   <section class="panel"><header><h3>Le parcours client en quatre temps</h3></header><div class="bd"><div class="steps">
+    <div><b>Scanner ou ouvrir le lien</b>QR code distribué par les commerciaux, affiché dans les garages et sur les camions. Le site s'ouvre sans téléchargement.</div>
+    <div><b>Commander et recevoir un camion</b>Adresse, contact sur place, téléphone. Le système interroge les camions connectés et attribue la demande au chauffeur le mieux classé en points. Le chauffeur peut ajuster l'estimation de ±15 % ; le client valide en connaissant le prix, le nom, le téléphone, la photo et la plaque.</div>
+    <div><b>Suivre l'intervention</b>Camion sur la carte, code de sécurité, étape de dépotage visible par le client.</div>
+    <div><b>Dépotage, notification, enquête</b>Après le dépotage dans une STBV de l'ONAS (Cambérène, Pikine, Rufisque, Tivaouane Peulh), le client reçoit la notification finale, la photo, le reçu et une enquête de 20 secondes qui alimente les points du chauffeur.</div>
+   </div></div></section>
+   <div class="g g2">
+    <section class="panel"><header><h3>Grille tarifaire de référence</h3><span class="h">paramètres réglables par l'AAAS</span></header><div class="bd" style="padding:0"><div class="tbl-wrap"><table class="tb"><tbody>
+     <tr><td>Forfait de déplacement</td><td class="r num">${f(T.forfait)} F</td></tr>
+     <tr><td>Par m³ pompé</td><td class="r num">${f(T.m3)} F</td></tr>
+     <tr><td>Approche au-delà de ${T.franchiseKm} km</td><td class="r num">${T.approcheKm} F/km</td></tr>
+     <tr><td>Transport vers la station</td><td class="r num">${T.stationKm} F/km</td></tr>
+     <tr><td>Ruelle étroite · tuyau &gt; 30 m</td><td class="r num">${f(T.ruelle)} · ${f(T.tuyau)} F</td></tr>
+     <tr><td>Forte demande · hivernage · programmé</td><td class="r num">+15 % · +10 % · −5 %</td></tr>
+     <tr><td><b>Exemple : 10 m³ aux Parcelles Assainies</b></td><td class="r num"><b>${f(ex.total)} F</b></td></tr>
+    </tbody></table></div></div></section>
+    <section class="panel"><header><h3>Les deux offres pour les vidangeurs</h3></header><div class="bd" style="padding:0"><div class="tbl-wrap"><table class="tb">
+     <thead><tr><th></th><th>Basique</th><th>Premium</th></tr></thead><tbody>
+     <tr><td>Prix</td><td class="num">25 000 F/mois</td><td class="num">10 % par mission</td></tr>
+     <tr><td>Contact client, estimation, GPS</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+     <tr><td>Boost de visibilité</td><td class="no">—</td><td class="yes">✓</td></tr>
+     <tr><td>Encaissement par la plateforme</td><td class="no">—</td><td class="yes">✓</td></tr>
+     <tr><td>Versement et état chaque soir</td><td class="no">—</td><td class="yes">✓</td></tr>
+     <tr><td>Journal de caisse, état financier</td><td class="no">—</td><td class="yes">✓</td></tr>
+     <tr><td>Mandat garage (5 %)</td><td>payé par le chauffeur</td><td>pris sur les 10 %</td></tr>
+    </tbody></table></div></div></section>
+   </div>
+   <section class="panel"><header><h3>Navigation et traçage, comme Yango ou Uber</h3><span class="h">ce que la version réelle doit intégrer</span></header><div class="bd">
+    <p class="lead" style="margin:0">Dans ce prototype, la carte est un plan schématique animé. La version réelle utilise une vraie cartographie et le GPS du téléphone du chauffeur. Le fonctionnement est le même que chez Yango ou Uber.</p>
+    <div class="steps">
+     <div><b>Position du chauffeur</b>L'application chauffeur envoie sa position GPS toutes les 5 à 10 secondes, même écran éteint, tant qu'une mission est en cours.</div>
+     <div><b>Diffusion en temps réel</b>Le serveur relaie la position au client et au tableau de bord AAAS par connexion permanente (WebSocket). L'heure d'arrivée est recalculée à chaque point.</div>
+     <div><b>Itinéraire et guidage</b>Calcul de l'itinéraire le plus court en tenant compte du trafic, guidage vocal virage par virage en français, ou ouverture directe dans Google Maps ou Waze.</div>
+     <div><b>Trace et géorepérage</b>Chaque trajet est enregistré. Les zones autour du client et des stations ONAS valident automatiquement l'arrivée et le dépotage.</div>
+    </div>
+    <div class="tbl-wrap"><table class="tb"><thead><tr><th>Brique</th><th>Options possibles</th><th>Remarque</th></tr></thead><tbody>
+     <tr><td><b>Fond de carte</b></td><td>Google Maps Platform · Mapbox · OpenStreetMap</td><td>OpenStreetMap est gratuit et bien renseigné à Dakar ; Google est le plus familier pour les chauffeurs.</td></tr>
+     <tr><td><b>Calcul d'itinéraire et d'heure d'arrivée</b></td><td>Google Routes · Mapbox Directions · OSRM ou GraphHopper (open source, hébergés par l'AAAS)</td><td>Les solutions open source évitent un coût à chaque requête une fois le volume important.</td></tr>
+     <tr><td><b>Temps réel</b></td><td>Firebase · Supabase Realtime · serveur WebSocket</td><td>Firebase est le plus rapide à mettre en place pour un pilote.</td></tr>
+     <tr><td><b>Guidage chauffeur</b></td><td>Lien vers Google Maps ou Waze au départ ; SDK de navigation intégré ensuite</td><td>Commencer par le lien : zéro développement, les chauffeurs connaissent déjà ces applications.</td></tr>
+     <tr><td><b>Mode dégradé</b></td><td>Envoi des positions en différé, SMS de statut</td><td>Le réseau coupe en périphérie : les points sont stockés sur le téléphone puis renvoyés.</td></tr>
+    </tbody></table></div>
+    <div class="callout">La trace GPS sert aussi de preuve : trajet réel jusqu'à la station, durée sur place, distance facturée. En cas de litige sur le prix ou de soupçon de dépotage sauvage, l'AAAS rejoue le trajet.</div>
+    <div class="callout bl">À cadrer dès le départ : consentement du chauffeur au suivi pendant les missions uniquement (pas en dehors), durée de conservation des trajets, et coût des cartes payantes selon le nombre de commandes. Ces tarifs évoluent : à vérifier au moment du choix.</div>
+   </div></section>
+   <section class="panel"><header><h3>Lancement terrain avec les commerciaux</h3></header><div class="bd">
+    <div class="g g2" style="align-items:center">
+     <div class="flyer"><div class="q" data-qr="https://aaas-sn.com/vidange?ref=COM-014" data-size="120"></div>
+      <div><h4>Votre fosse est pleine ?</h4><p>Scannez, voyez le prix, un vidangeur agréé AAAS arrive.</p><p>Paiement Wave · Orange Money · Free Money</p><span class="cd">Code commercial COM-014</span></div></div>
+     <ul class="why" style="grid-template-columns:minmax(0,1fr)">
+      <li><b>Un QR par commercial</b>Chaque commande garde le code d'origine : prime par première commande et objectifs par quartier.</li>
+      <li><b>Où distribuer</b>Marchés, mosquées et églises, écoles, boutiques de quartier, délégués de quartier, et les zones en tension du tableau de bord.</li>
+      <li><b>Sans smartphone</b>Appel au numéro court de l'AAAS ou passage au garage partenaire, qui saisit la commande.</li>
+     </ul>
+    </div></div></section>
+   <section class="panel"><header><h3>Points de vigilance</h3></header><div class="bd"><ul class="why">
+    <li><b>Contournement</b>Après une première vidange, le client peut appeler le chauffeur directement. Parades : paiement sécurisé, garantie AAAS en cas de litige, rappel automatique et points de fidélité.</li>
+    <li><b>Seuil Premium</b>Au-delà de 250 000 F de CA mensuel, le Premium coûte plus que l'abonnement. Envisager un plafond ou une commission dégressive.</li>
+    <li><b>Espèces</b>Une grande partie des ménages paie en liquide. Le Basique l'accepte ; le Premium peut proposer un dépôt chez un agent Wave ou Orange Money.</li>
+    <li><b>Paiements mobiles</b>Ouvrir des comptes marchands Wave Business et Orange Money, ou passer par un agrégateur local, avant le pilote.</li>
+    <li><b>Dépotage sauvage</b>Le scan en station conditionne le paiement du chauffeur. C'est l'argument le plus fort auprès de l'ONAS et des bailleurs.</li>
+    <li><b>Données personnelles</b>Déclaration auprès de la CDP (Commission de protection des données personnelles) et consentement des clients pour les photos et la géolocalisation.</li>
+   </ul></div></section>
+   <section class="panel"><header><h3>Feuille de route proposée</h3></header><div class="bd"><div class="road">
+    <div><span class="eyebrow">Mois 1 à 3</span><h4>Pilote Pikine, Guédiawaye, Parcelles</h4><ul><li>Enrôlement de 30 camions et 10 garages</li><li>Site web + QR, paiement Wave</li><li>Grille tarifaire validée par le bureau</li></ul></div>
+    <div><span class="eyebrow">Mois 4 à 6</span><h4>Tout Dakar + Premium complet</h4><ul><li>Versement du soir et état financier</li><li>Scan des stations avec l'ONAS</li><li>Application Android pour les chauffeurs</li></ul></div>
+    <div><span class="eyebrow">Mois 7 à 12</span><h4>Régions et ERP associatif</h4><ul><li>Thiès, Touba, Kaolack, Saint-Louis</li><li>Cotisations, formations, enrôlement en ligne</li><li>Modèle reproductible pour les autres associations de la PASA</li></ul></div>
+   </div></div></section>
+  </div>`;
+}
+
+/* ================= MODE TEST RÉEL : base partagée ================= */
+/* Quand la base est disponible, client, chauffeur et bureau AAAS lisent et écrivent les mêmes données en direct.
+   Collections : chauffeurs/{id}, demandes/{id}. Sinon, la page reste en démonstration locale. */
+const L={on:false,db:null,user:null,me:null,canWrite:true,chf:{},dem:{},cur:null,lastStatus:null,
+  drvSel:ls.get("setal-drv")||"",draft:{amount:0,motif:"Rue ensablée, manœuvre longue",job:null},busy:{},hbT:0,resetArm:false,enr:{}};
+const HUMAN_MS=30000;
+const now=()=>Date.now();
+const isHuman=id=>{const c=L.chf[id];return !!(c&&c.hb&&now()-c.hb<HUMAN_MS)};
+function capAdj(est,a){const cap=Math.round(est*0.15/500)*500;return Math.max(-cap,Math.min(cap,a||0))}
+function curAdj(){return L.on&&L.cur?{amount:L.cur.adj||0,motif:L.cur.motif||""}:S.adj}
+async function upd(id,data,key){
+  if(key){if(L.busy[key])return;L.busy[key]=1}
+  try{await L.db.collection("demandes").doc(id).update(Object.assign({ts:now()},data))}
+  catch(e){toast(e&&e.code==="invalid_argument"?"Écriture refusée : il faut un accès Contributeur ou Éditeur à cette page.":"Écriture impossible ("+(e&&e.code||"erreur")+"). Réessayez.");if(key)delete L.busy[key]}
+}
+async function updChf(id,data){try{await L.db.collection("chauffeurs").doc(id).update(data)}catch(e){}}
+function syncDRV(){
+  const arr=Object.entries(L.chf).map(([id,x])=>Object.assign({id,ini:(x.n||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(),col:"#3d9ddf",eta:15,base:3,note:4.5,nb:0,pts:0,online:true,busy:false,plan:"basique",cap:10},x));
+  arr.sort((a,b)=>a.id<b.id?-1:1);
+  DRV.length=0;arr.forEach(x=>DRV.push(x));
+  if(!L.drvSel||!L.chf[L.drvSel]) L.drvSel=DRV[0]?DRV[0].id:"";
+}
+function myDemandes(){return Object.values(L.dem).filter(x=>x.createdBy===L.me).sort((a,b)=>b.createdAt-a.createdAt)}
+function pickCur(){
+  const c=S.c, d=myDemandes().find(x=>!x.archived)||null;
+  L.cur=d;
+  if(!d){L.lastStatus=null;return}
+  ["svc","vol","ml","q","when","date","heure","ruelle","tuyau","nom","tel","adresse","repere","same","contactNom","contactTel","pay"].forEach(k=>{if(d[k]!==undefined)c[k]=d[k]});
+  c.refused=d.refused||[]; c.drv=d.drv||null; c.track=d.track||0;
+  const st=d.status;
+  if(st==="recherche"){ if(L.lastStatus!=="recherche"||c.step!==2){c.step=2;c.scan=0} }
+  else if(st==="attribuee"){ if(c.step!==2){c.step=2;c.scan=1.3} }
+  else if(st==="proposee"){ if(c.step<3||c.step>4) c.step=3 }
+  else if(st==="lancee"){ if(c.step<5) c.step=5 }
+  else if(st==="terminee"){ c.step=6; c.rated=true }
+  if(st!=="terminee") c.rated=false;
+  if(d.rating) c.rating=d.rating;
+  L.lastStatus=st;
+}
+function myJob(){
+  return Object.values(L.dem).filter(x=>x.drv===L.drvSel&&!x.archivedDrv&&["attribuee","proposee","lancee","terminee"].includes(x.status)).sort((a,b)=>b.createdAt-a.createdAt)[0]||null;
+}
+async function liveBoot(){
+  let db=null,user=null,src="";
+  if(window.claude&&typeof window.claude.use==="function"){
+    try{[db,user]=await Promise.all([window.claude.use("db"),window.claude.use("user")])}catch(e){db=null}
+    if(db) src="claude";
+  }
+  const FC=window.FIREBASE_CONFIG;
+  if(!db&&window.firebase&&FC&&FC.apiKey&&!/COLLER|VOTRE/i.test(FC.apiKey)){
+    try{if(!firebase.apps.length)firebase.initializeApp(FC);db=firebase.firestore();src="firebase"}catch(e){db=null;console.error(e)}
+  }
+  if(!db) return;
+  L.db=db;L.user=user;L.on=true;L.src=src;
+  if(src==="claude"){try{L.me=user?await user.id():null;const cw=user?await user.can("data.write"):null;L.canWrite=cw!==false}catch(e){}}
+  if(!L.me){L.me=ls.get("setal-anon")||("v"+Math.random().toString(36).slice(2,10));ls.set("setal-anon",L.me)}
+  S.c.step=0;
+  db.collection("chauffeurs").onSnapshot(s=>{const m={};s.docs.forEach(d=>m[d.id]=d.data());L.chf=m;syncDRV();render()},e=>toast("Connexion à la base interrompue ("+e.code+"). Rechargez la page."));
+  db.collection("demandes").orderBy("createdAt","desc").limit(60).onSnapshot(s=>{const m={};s.docs.forEach(d=>m[d.id]=Object.assign({id:d.id},d.data()));L.dem=m;pickCur();render()},e=>toast("Connexion à la base interrompue ("+e.code+"). Rechargez la page."));
+  render();
+}
+/* ---------- actions en mode réel ---------- */
+async function liveAct(a,v,el){
+  const c=S.c,d=S.d,cur=L.cur;
+  switch(a){
+    case "search":{
+      if(!L.canWrite){toast("Votre accès à cette page est en lecture seule : demandez un accès Contributeur ou Éditeur.");return true}
+      if(!DRV.length){toast("Aucun chauffeur enrôlé. Ajoutez-en dans Pilotage AAAS.");return true}
+      const P=prix(c,S.sim), id="VD"+now().toString(36).toUpperCase();
+      const doc={num:"AAAS-"+id,createdAt:now(),createdBy:L.me,ts:now(),status:"recherche",refused:[],drv:null,track:0,est:P.total,station:P.q.st,qn:P.q.n};
+      ["svc","vol","ml","q","when","date","heure","ruelle","tuyau","nom","tel","adresse","repere","same","contactNom","contactTel","pay"].forEach(k=>doc[k]=c[k]);
+      c.step=2;c.scan=0;render();
+      try{await L.db.collection("demandes").doc(id).set(doc)}catch(e){toast("Demande non enregistrée ("+(e&&e.code||"erreur")+").");c.step=1;render()}
+      return true}
+    case "refuse-drv": if(!cur) return true; upd(cur.id,{refused:(cur.refused||[]).concat(cur.drv),drv:null,status:"recherche"}); toast("Recherche du chauffeur suivant…"); return true;
+    case "confirm": if(!cur) return true; upd(cur.id,{status:"lancee",pay:c.pay,prix:cur.est+capAdj(cur.est,cur.adj),track:0}); c.step=5; toast("Intervention lancée. Le chauffeur est prévenu."); render(); return true;
+    case "track":{ if(!cur) return true; const t=cur.track||0;
+      if(t===0) upd(cur.id,{track:1,legStart:now(),legDur:24000});
+      else if(t===1) upd(cur.id,{track:2});
+      else if(t===2) upd(cur.id,{track:3});
+      else if(t===3) upd(cur.id,{track:4,legStart:now(),legDur:16000});
+      else if(t===4) upd(cur.id,{track:5});
+      return true}
+    case "send-rate":{ if(!cur) return true; const g=gain(c), D=L.chf[cur.drv];
+      await upd(cur.id,{status:"terminee",rating:c.rating,sv:c.sv,comment:c.comment,points:g});
+      if(D) updChf(cur.drv,{pts:(D.pts||0)+g,nb:(D.nb||0)+1,busy:false});
+      toast("Merci ! "+(D?D.n:"Le chauffeur")+" gagne "+g+" points."); return true}
+    case "restart": if(cur) upd(cur.id,{archived:true}); Object.assign(c,{step:0,drv:null,track:0,prog1:0,prog2:0,photo:null,rating:0,comment:"",rated:false,scan:0,refused:[],sv:{}}); L.cur=null; render(); return true;
+    /* chauffeur */
+    case "drvsel": L.drvSel=el.value; ls.set("setal-drv",L.drvSel); L.hbT=0; render(); return true;
+    case "online": updChf(L.drvSel,{online:el.checked,hb:el.checked?now():0}); return true;
+    case "adj":{ const j=myJob(); if(!j) return true; L.draft.job=j.id; L.draft.amount=capAdj(j.est,L.draft.amount+(+v)); keepScroll=true; render(); return true}
+    case "motif": L.draft.motif=el.value; return true;
+    case "accept":{ const j=myJob(); if(!j) return true; upd(j.id,{status:"proposee",adj:L.draft.job===j.id?capAdj(j.est,L.draft.amount):0,motif:L.draft.motif}); updChf(L.drvSel,{busy:true}); toast("Prix envoyé au client. En attente de sa validation."); return true}
+    case "refuse":{ const j=myJob(); if(!j) return true; upd(j.id,{refused:(j.refused||[]).concat(L.drvSel),drv:null,status:"recherche"}); toast("Demande renvoyée au chauffeur suivant."); return true}
+    case "lnav":{ const j=myJob(); if(j) upd(j.id,{track:1,legStart:now(),legDur:20000}); d.view="mission"; render(); return true}
+    case "lcode":{ const j=myJob(); if(!j) return true; if((d.code||"")==="4827"){upd(j.id,{track:3});toast("Code correct. Arrivée confirmée.")} else toast("Code incorrect. Demandez le code à 4 chiffres reçu par le client."); return true}
+    case "lpump":{ const j=myJob(); if(j) upd(j.id,{track:4,legStart:now(),legDur:16000,anomalies:d.anoms}); return true}
+    case "lscan":{ const j=myJob(); if(j) upd(j.id,{track:5}); return true}
+    case "lnext":{ const j=myJob(); if(j) upd(j.id,{archivedDrv:true}); updChf(L.drvSel,{busy:false}); d.view="home"; d.code=""; d.anoms=[]; render(); return true}
+    /* bureau */
+    case "enr": L.enr[v]=el.value; return true;
+    case "enr-save":{ const e=L.enr; if(!(e.n&&e.tel&&e.immat)){toast("Nom, téléphone et plaque sont obligatoires.");return true}
+      const id="c"+now().toString(36);
+      try{await L.db.collection("chauffeurs").doc(id).set({n:e.n,tel:e.tel,truck:e.truck||"Camion",immat:e.immat,cap:+(e.cap||10),plan:e.plan||"basique",pts:500,note:4.5,nb:0,online:true,busy:false,base:2+Math.random()*4,eta:15,col:["#3d9ddf","#f7731f","#1f9467","#8a5cc2","#b67a12","#5b6fb5"][Math.floor(Math.random()*6)]});L.enr={};toast(e.n+" est enrôlé et peut recevoir des demandes.")}
+      catch(er){toast("Enrôlement refusé ("+(er&&er.code||"erreur")+").")}
+      render(); return true}
+    case "seed":{ try{for(const x of DEMO_DRV){const o=Object.assign({},x);delete o.id;delete o.ini;o.hb=0;await L.db.collection("chauffeurs").doc(x.id).set(o)} toast("6 chauffeurs de test chargés.")}catch(e){toast("Chargement refusé ("+(e&&e.code||"erreur")+").")} return true}
+    case "reset-arm": L.resetArm=true; render(); setTimeout(()=>{L.resetArm=false;render()},5000); return true;
+    case "reset-go":{ L.resetArm=false;
+      try{for(const id of Object.keys(L.dem)) await L.db.collection("demandes").doc(id).delete();
+          for(const id of Object.keys(L.chf)) await L.db.collection("chauffeurs").doc(id).update({busy:false,online:true});
+          toast("Données de test effacées : demandes supprimées, camions libérés.")}catch(e){toast("Réinitialisation refusée ("+(e&&e.code||"erreur")+").")}
+      render(); return true}
+  }
+  return false;
+}
+/* ---------- moteur en mode réel (attribution, chauffeur simulé, trajets) ---------- */
+function liveTick(){
+  const c=S.c, cur=L.cur, t=now();
+  if(S.tab==="client"&&cur){
+    if(cur.status==="recherche"&&c.step===2&&c.scan>=1.25&&!L.busy["as:"+cur.id+":"+(cur.refused||[]).length]){
+      const id=assign(c);
+      if(id) upd(cur.id,{drv:id,status:"attribuee",assignedAt:t},"as:"+cur.id+":"+(cur.refused||[]).length);
+      else {upd(cur.id,{status:"sans_camion",archived:true});c.step=1;toast("Aucun camion disponible dans un rayon de "+RAYON+" km. Essayez de programmer la vidange.")}
+    }
+    const sim=cur.drv&&!isHuman(cur.drv), age=t-(cur.ts||0), k=cur.id+":"+cur.status+":"+(cur.track||0);
+    if(sim&&cur.status==="attribuee"&&age>2500) upd(cur.id,{status:"proposee",adj:capAdj(cur.est,2000),motif:"Rue ensablée, manœuvre longue"},k);
+    if(cur.status==="lancee"){
+      const tr=cur.track||0;
+      if(sim&&tr===0&&age>1500) upd(cur.id,{track:1,legStart:t,legDur:24000},k);
+      if(sim&&tr===2&&age>3000) upd(cur.id,{track:3},k);
+      if(sim&&tr===3&&age>3000) upd(cur.id,{track:4,legStart:t,legDur:16000},k);
+    }
+  }
+  /* trajets : n'importe quelle vue peut constater l'arrivée */
+  const jobs=[cur,S.tab==="vidangeur"?myJob():null].filter(Boolean);
+  jobs.forEach(j=>{
+    if(j.status!=="lancee"||!j.legStart) return;
+    const p=(t-j.legStart)/(j.legDur||20000), k=j.id+":lancee:"+j.track;
+    if(j.track===1&&p>=1) upd(j.id,{track:2},k);
+    if(j.track===4&&p>=1) upd(j.id,{track:5},k);
+  });
+  /* présence du téléphone chauffeur */
+  if(S.tab==="vidangeur"&&L.drvSel&&L.chf[L.drvSel]&&L.chf[L.drvSel].online!==false&&t-L.hbT>15000){L.hbT=t;updChf(L.drvSel,{hb:t})}
+}
+function legP(j){return j&&j.legStart?Math.max(0,Math.min(1,(now()-j.legStart)/(j.legDur||20000))):0}
+
+/* ---------- écrans chauffeur en mode réel ---------- */
+function driverLive(){
+  const d=S.d, me=L.chf[L.drvSel], j=myJob();
+  const sel=`<div class="card" style="gap:6px"><span class="lbl">Ce téléphone est le camion de</span>
+    <select class="inp" id="l-drv" data-a="drvsel" aria-label="Chauffeur">${DRV.map(x=>`<option value="${x.id}" ${x.id===L.drvSel?"selected":""}>${esc(x.n)} · ${esc(x.immat||"")}</option>`).join("")}</select></div>`;
+  if(!me) return phone(`<div class="scr">${sel}<div class="card" style="text-align:center;color:var(--fg-3)">Aucun chauffeur enrôlé. Le bureau AAAS doit d'abord en ajouter un.</div></div>`,{title:"Sëtal Pro",sub:"Test réel"});
+  let inner="";
+  if(d.view==="mission"&&j&&j.status!=="attribuee"){
+    const tr=j.track||0;
+    const steps=["Démarrer","En route","Code client","Pompage","Vers la STBV","Dépotage"];
+    let body="";
+    if(j.status==="proposee") body=`<div class="card">Prix envoyé : <b class="num">${F(j.est+capAdj(j.est,j.adj))}</b>. En attente de la validation de ${esc(j.nom)}.</div>`;
+    else if(j.status==="terminee") body=`<div class="done-hero"><div class="ck">${I.check}</div><b>Mission terminée</b><span style="font-size:13px;color:var(--fg-2)">Note du client : ${"★".repeat(j.rating||0)} · <b>+${j.points||0} points</b></span><button class="cta" data-a="lnext">Mission suivante</button></div>`;
+    else if(tr===0) body=`<div class="card"><b>${esc(j.nom)} a validé ${F(j.prix||j.est)}</b><div style="font-size:13px;color:var(--fg-2)">${esc(j.adresse)}, ${esc(j.qn)}<br>Contact sur place : ${j.same?esc(j.nom)+" · "+esc(j.tel):esc(j.contactNom)+" · "+esc(j.contactTel)}</div><button class="cta or" data-a="lnav">Démarrer la navigation</button></div>`;
+    else if(tr===1) body=`<div class="map">${mapSvg("dm",1,legP(j))}</div><div class="card" style="background:var(--fg);color:var(--bg);box-shadow:none"><div class="row" style="gap:12px"><span style="font-size:30px;line-height:1" id="dm-arr">${navInstr(legP(j))[0]}</span><div><b id="dm-ins">${navInstr(legP(j))[1]}</b><div style="font-size:12px;opacity:.75" id="dm-rest">${navRest(legP(j))}</div></div></div></div><div class="note ok">Position partagée en direct avec le client et l'AAAS.</div>`;
+    else if(tr===2) body=`<div class="card"><span class="lbl">Arrivé : demandez le code</span><input class="inp num" id="d-code" data-a="dcode" inputmode="numeric" maxlength="4" placeholder="_ _ _ _" value="${esc(d.code)}" style="font-size:22px;letter-spacing:.3em;text-align:center"><div style="font-size:12px;color:var(--fg-3)">Code de test : 4827</div><button class="cta" data-a="lcode">Valider l'arrivée</button></div>`;
+    else if(tr===3) body=`<div class="card"><span class="lbl">Photos et anomalies</span><div class="row"><span class="badge ok">✓ Avant</span><span class="badge ok">✓ Après</span></div>${["Fissure sur la dalle","Fosse remplie de sable","Remontée de la nappe","Tampon cassé ou absent"].map(a=>`<label class="tog"><input type="checkbox" id="d-an-${a.length}" data-a="anom" data-v="${a}" ${d.anoms.includes(a)?"checked":""}><span>${a}</span></label>`).join("")}<button class="cta" data-a="lpump">Pompage terminé · partir vers la ${esc(j.station)}</button></div>`;
+    else if(tr===4) body=`<div class="map">${mapSvg("dm",2,legP(j))}</div><div class="card"><b>Direction ${esc(j.station)}</b><div style="font-size:13px;color:var(--fg-2)">À l'entrée, scannez le QR de la station.</div><button class="cta or" data-a="lscan">J'ai scanné le QR de la station</button></div>`;
+    else body=`<div class="card"><div class="note ok">Dépotage confirmé à la ${esc(j.station)}.</div><div style="font-size:13px;color:var(--fg-2)">En attente de l'enquête du client. Vos points s'afficheront ici.</div></div>`;
+    inner=`<div class="scr"><div class="row" style="gap:4px;flex-wrap:wrap">${steps.map((s,i)=>`<span class="badge ${i<tr||(j.status==="terminee")?"ok":i===tr?"or":""}">${s}</span>`).join("")}</div>${body}</div>`;
+  }else{
+    const est=j?j.est:0, dr=j&&L.draft.job===j.id?capAdj(est,L.draft.amount):0;
+    inner=`<div class="scr">${sel}
+      <div class="online"><div><b>${me.online!==false?"En ligne":"Hors ligne"}</b><div style="font-size:12px;color:var(--fg-3)">${esc(me.truck)} ${me.cap} m³ · ${esc(me.immat)}</div></div>
+       <label class="tog" style="flex:none"><input type="checkbox" id="d-on" data-a="online" ${me.online!==false?"checked":""}></label></div>
+      <div class="kp"><div><b class="num">${f(me.pts)}</b><small>points</small></div><div><b class="num">${me.nb||0}</b><small>missions</small></div><div><b>${(me.note||0).toString().replace(".",",")}</b><small>★ note</small></div></div>
+      ${j&&j.status==="attribuee"?`<div class="req"><div class="row" style="justify-content:space-between"><span class="badge or">Nouvelle demande</span><span class="badge ok">Vous êtes prioritaire</span></div>
+        <div style="font-size:14px"><b>${SVCN[j.svc]}${j.svc==="fosse"?" "+j.vol+" m³":""} · ${esc(j.nom)}</b><br><span style="color:var(--fg-2);font-size:13px">${esc(j.adresse)}, ${esc(j.qn)}<br>Dépotage : ${esc(j.station)}</span></div>
+        <div class="adj"><div class="row" style="justify-content:space-between;font-size:13px"><span>Estimation AAAS</span><span class="num">${F(est)}</span></div>
+         <div class="row" style="justify-content:space-between"><button class="chip" data-a="adj" data-v="-1000">− 1 000</button><b class="num" style="font-size:20px">${F(est+dr)}</b><button class="chip" data-a="adj" data-v="1000">+ 1 000</button></div>
+         <select class="inp" id="d-motif" data-a="motif" aria-label="Motif" style="font-size:13px;padding:6px 9px">${["Rue ensablée, manœuvre longue","Fosse plus grande que déclarée","Tuyau supplémentaire nécessaire","Accès plus simple que prévu","Client fidèle"].map(m=>`<option ${m===L.draft.motif?"selected":""}>${m}</option>`).join("")}</select></div>
+        <div class="row"><button class="cta ghost" style="flex:1;padding:11px" data-a="refuse">Refuser</button><button class="cta or" style="flex:2;padding:11px" data-a="accept">Proposer ${F(est+dr)}</button></div></div>`
+      :j?`<div class="card"><b>Mission en cours · ${esc(j.nom)}</b><div style="font-size:13px;color:var(--fg-2)">${j.status==="proposee"?"En attente de la validation du client":j.status==="terminee"?"Terminée · enquête reçue":"Étape "+((j.track||0)+1)+" sur 6"}</div><button class="cta" data-a="dview" data-v="mission">Ouvrir la mission</button></div>`
+      :`<div class="card" style="text-align:center;color:var(--fg-3);font-size:13.5px">${me.online!==false?"En attente de demandes. Gardez cet onglet ouvert : votre téléphone est signalé comme connecté.":"Passez en ligne pour recevoir des demandes."}</div>`}
+    </div>`;
+  }
+  const nav=`<div class="navb">${[["home","Accueil",I.home],["mission","Mission",I.truck]].map(n=>`<button class="${d.view===n[0]?"on":""}" data-a="dview" data-v="${n[0]}">${n[2]}${n[1]}</button>`).join("")}</div>`;
+  return phone(inner,{title:"Sëtal Pro",sub:"Test réel · "+esc(me.n),nav});
+}
+
+/* ---------- bureau AAAS en mode réel ---------- */
+const STL={recherche:["Recherche","bl"],attribuee:["Attribuée","bl"],proposee:["Prix proposé","or"],lancee:["En cours","or"],terminee:["Terminée","ok"],sans_camion:["Sans camion","bad"]};
+function liveBureau(){
+  if(!L.on) return `<div class="callout">Mode démonstration : cette vue n'est pas reliée à la base partagée, chaque appareil joue seul. Pour tester sur plusieurs téléphones, renseignez la configuration Firebase (voir README) ou utilisez le lien claude.ai partagé.</div>`;
+  const dem=Object.values(L.dem).sort((a,b)=>b.createdAt-a.createdAt).slice(0,15);
+  const rk=DRV.slice().sort((a,b)=>b.pts-a.pts);
+  const e=L.enr;
+  return `<section class="panel" style="border-top:4px solid var(--ok)"><header><h3>Test en direct</h3><span class="h">base partagée : les demandes des clients et les réponses des chauffeurs arrivent ici en temps réel</span>
+    <div style="margin-left:auto">${L.resetArm?`<button class="cta" style="width:auto;padding:6px 12px;font-size:13px;background:var(--bad)" data-a="reset-go">Confirmer l'effacement</button>`:`<button class="cta ghost" style="width:auto;padding:6px 12px;font-size:13px" data-a="reset-arm">Effacer les données de test</button>`}</div></header>
+   <div class="bd"><div class="g g2" style="align-items:start">
+    <div class="stack"><div class="lbl">Demandes</div><div class="tbl-wrap"><table class="tb"><thead><tr><th>Client</th><th>Chauffeur</th><th class="r">Prix</th><th>Statut</th></tr></thead><tbody>
+     ${dem.length?dem.map(x=>{const s=STL[x.status]||[x.status,""];const D=L.chf[x.drv];return `<tr><td><b>${esc(x.nom)}</b><br><small class="muted">${esc(x.qn)} · ${SVCN[x.svc]||""}</small></td><td>${D?esc(D.n):"—"}</td><td class="r num">${f(x.prix||(x.est+capAdj(x.est,x.adj)))}</td><td><span class="pill ${s[1]}">${s[0]}${x.status==="lancee"?" · "+((x.track||0)+1)+"/6":""}</span></td></tr>`}).join(""):`<tr><td colspan="4" class="muted">Aucune demande pour l'instant. Passez une commande depuis l'onglet Client.</td></tr>`}
+    </tbody></table></div></div>
+    <div class="stack"><div class="lbl">Classement des chauffeurs</div><div class="tbl-wrap"><table class="tb"><thead><tr><th>#</th><th>Chauffeur</th><th class="r">Points</th><th>Téléphone</th></tr></thead><tbody>
+     ${rk.length?rk.map((x,i)=>`<tr><td class="num">${i+1}</td><td><b>${esc(x.n)}</b><br><small class="muted">${esc(x.truck)} ${x.cap} m³ · ${esc(x.immat)}</small></td><td class="r num">${f(x.pts)}</td><td>${isHuman(x.id)?'<span class="pill ok">Connecté</span>':x.online===false?'<span class="pill">Hors ligne</span>':'<span class="pill bl">Simulé</span>'}</td></tr>`).join(""):`<tr><td colspan="4" class="muted">Aucun chauffeur enrôlé. <button class="chip" data-a="seed">Charger 6 chauffeurs de test</button></td></tr>`}
+    </tbody></table></div>
+    <div class="lbl">Enrôler un chauffeur</div>
+    <div class="g g2" style="gap:8px">
+     <input class="inp" id="e-n" data-a="enr" data-v="n" value="${esc(e.n||"")}" placeholder="Nom complet" aria-label="Nom">
+     <input class="inp" id="e-tel" data-a="enr" data-v="tel" value="${esc(e.tel||"")}" placeholder="Téléphone" aria-label="Téléphone">
+     <input class="inp" id="e-truck" data-a="enr" data-v="truck" value="${esc(e.truck||"")}" placeholder="Marque du camion" aria-label="Marque">
+     <input class="inp" id="e-immat" data-a="enr" data-v="immat" value="${esc(e.immat||"")}" placeholder="Plaque (DK-0000-AA)" aria-label="Plaque">
+     <select class="inp" id="e-cap" data-a="enr" data-v="cap" aria-label="Citerne">${[8,10,12,16].map(v=>`<option value="${v}" ${(+e.cap||10)===v?"selected":""}>${v} m³</option>`).join("")}</select>
+     <select class="inp" id="e-plan" data-a="enr" data-v="plan" aria-label="Formule"><option value="basique">Basique</option><option value="premium" ${e.plan==="premium"?"selected":""}>Premium</option></select>
+    </div><button class="cta" data-a="enr-save" style="width:auto;align-self:flex-start;padding:9px 16px">Enrôler</button></div>
+   </div>
+   <div class="note">Un chauffeur « Simulé » répond automatiquement (prix +2 000 F, trajet animé). Dès qu'un téléphone ouvre l'onglet Vidangeur à son nom, il passe « Connecté » et c'est la personne qui répond.</div></div></section>`;
+}
+
+/* ================= rendu ================= */
+const TABS=[["client","Client","commander une vidange"],["vidangeur","Vidangeur","Basique ou Premium"],["garage","Chef de garage","mandat digital"],["aaas","Pilotage AAAS","bureau"],["modele","Modèle et lancement",""]];
+let rendering=false,pending=false;
+function render(){
+  if(rendering){pending=true;return}
+  rendering=true;
+  try{renderNow()}finally{rendering=false}
+  if(pending){pending=false;requestAnimationFrame(render)}
+}
+function renderNow(){
+  const md=$("#mode"); if(md){md.textContent=L.on?"Test réel · base partagée"+(L.src==="firebase"?" (Firebase)":""):"Simulation sur cet appareil";md.className="proto"+(L.on?" live":"")}
+  $("#tabs").innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]?"on":""}" data-a="tab" data-v="${t[0]}">${t[1]}${t[2]?` <small>${t[2]}</small>`:""}</button>`).join("");
+  const v=$("#view");
+  const active=document.activeElement&&document.activeElement.id;
+  const scr=v.querySelector(".scr"), st=scr?scr.scrollTop:0;
+  if(S.tab==="client") v.innerHTML=`<div class="stage">${clientScreen()}${clientSide()}</div>`;
+  else if(S.tab==="vidangeur") v.innerHTML=`<div class="stage">${driverScreen()}${driverSide()}</div>`;
+  else if(S.tab==="garage") v.innerHTML=`<div class="stage">${garageScreen()}${garageSide()}</div>`;
+  else if(S.tab==="aaas") v.innerHTML=aaasView();
+  else v.innerHTML=modelView();
+  const scr2=v.querySelector(".scr"); if(scr2&&keepScroll) scr2.scrollTop=st;
+  keepScroll=false;
+  if(active){const el=document.getElementById(active); if(el&&el.focus){el.focus(); if(el.setSelectionRange&&el.type==="text"){try{const n=el.value.length;el.setSelectionRange(n,n)}catch(e){}}}}
+  qrs();
+}
+let keepScroll=false;
+function qrs(){
+  document.querySelectorAll("[data-qr]").forEach(el=>{
+    const sz=+(el.dataset.size||72);
+    if(window.QRCode){try{new QRCode(el,{text:el.dataset.qr,width:sz*2,height:sz*2,colorDark:"#102437",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M})}catch(e){}}
+    else el.innerHTML=`<span style="font:11px var(--f-mono);color:#102437;line-height:1.3;display:block;width:${sz}px">${esc(el.dataset.qr)}</span>`;
+    el.style.minWidth=sz+"px";
+    el.querySelectorAll("img,canvas").forEach(x=>{x.style.width=sz+"px";x.style.height=sz+"px"});
+  });
+}
+let tt;
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200)}
+
+/* ---------- actions ---------- */
+const LIVE_ACTS=new Set(["search","refuse-drv","confirm","track","send-rate","restart","drvsel","online","adj","motif","accept","refuse","lnav","lcode","lpump","lscan","lnext","enr","enr-save","reset-arm","reset-go","seed"]);
+function act(a,v,el,evType){
+  const c=S.c,d=S.d,g=S.g;
+  if(L.on&&LIVE_ACTS.has(a)){ if(a==="enr"&&evType==="input"){L.enr[v]=el.value;return} liveAct(a,v,el); return; }
+  switch(a){
+    case "tab": S.tab=v; ls.set("setal-tab",v); window.scrollTo({top:0}); break;
+    case "svc": c.svc=v; keepScroll=true; break;
+    case "when": c.when=v; c.step=1; break;
+    case "go": c.step=+v; break;
+    case "vol": c.vol=+v; if(c.drv){const D=DRV.find(x=>x.id===c.drv); if(D.cap<c.vol) c.drv=null} keepScroll=true; break;
+    case "ml": c.ml=+v; keepScroll=true; break;
+    case "q": c.q=el.value; keepScroll=true; break;
+    case "repere": c.repere=el.value; if(evType==="input") return; break;
+    case "adresse": case "tel": case "contactNom": case "contactTel": c[a]=el.value; keepScroll=true; break;
+    case "same": c.same=el.checked; keepScroll=true; break;
+    case "search": c.step=2; c.scan=0; c.refused=[]; c.drv=null; break;
+    case "refuse-drv": c.refused.push(c.drv); c.drv=null; c.step=2; c.scan=0; toast("Recherche du chauffeur suivant…"); break;
+    case "sv": { const [k,x]=v.split(":"); c.sv[k]=x==="1"; keepScroll=true; break; }
+    case "adj": { const est=prix(c,S.sim).total, cap=Math.round(est*0.15/500)*500; S.adj.amount=Math.max(-cap,Math.min(cap,S.adj.amount+(+v))); keepScroll=true; break; }
+    case "motif": S.adj.motif=el.value; keepScroll=true; break;
+    case "date": c.date=el.value; keepScroll=true; break;
+    case "heure": c.heure=el.value; keepScroll=true; break;
+    case "ruelle": c.ruelle=el.checked; keepScroll=true; break;
+    case "tuyau": c.tuyau=el.checked; keepScroll=true; break;
+    case "drv": c.drv=v; const D=DRV.find(x=>x.id===v); if(D.plan==="premium"&&c.pay==="cash") c.pay="wave"; keepScroll=true; break;
+    case "pay": c.pay=v; keepScroll=true; break;
+    case "confirm": c.step=5; c.track=0; c.prog1=0; c.prog2=0; setTimeout(()=>{if(S.c.step===5&&S.c.track===0){S.c.track=1;render()}},1500); toast("Intervention lancée. "+DRV.find(x=>x.id===c.drv).n+" est prévenu par notification et SMS."); break;
+    case "track": if(c.track===1){c.prog1=1;c.track=2} else if(c.track===4){c.prog2=1;c.track=5} else {c.track=Math.min(5,c.track+1)} keepScroll=true; break;
+    case "photo": { const file=el.files&&el.files[0]; if(!file) return; const r=new FileReader(); r.onload=()=>{c.photo=r.result;render()}; r.readAsDataURL(file); return; }
+    case "rate": c.rating=+v; keepScroll=true; break;
+    case "tag": c.tags=c.tags.includes(v)?c.tags.filter(x=>x!==v):[...c.tags,v]; keepScroll=true; break;
+    case "comment": c.comment=el.value; return;
+    case "send-rate": { c.rated=true; keepScroll=true; const D=DRV.find(x=>x.id===c.drv); D.pts+=gain(c); toast("Merci ! "+D.n+" gagne "+gain(c)+" points."); break; }
+    case "rappel": c.rappel=el.checked; keepScroll=true; toast(c.rappel?"Rappel SMS activé.":"Rappel désactivé."); break;
+    case "restart": Object.assign(c,{step:0,drv:null,track:0,prog1:0,prog2:0,photo:null,rating:0,tags:[],comment:"",rated:false,scan:0,refused:[],sv:{}}); break;
+    case "sim-pointe": S.sim.pointe=el.checked; keepScroll=true; break;
+    case "sim-hiv": S.sim.hivernage=el.checked; keepScroll=true; break;
+    case "plan": d.plan=v; keepScroll=true; break;
+    case "dview": d.view=v; break;
+    case "online": d.online=el.checked; break;
+    case "accept": d.req=false; d.view="mission"; d.mstep=0; d.code=""; d.prog=0; d.nav=false; toast("Mission acceptée. Le client est prévenu."); break;
+    case "refuse": d.req=false; toast("Demande transmise au chauffeur suivant."); setTimeout(()=>{d.req=true; if(S.tab==="vidangeur"&&d.view==="home") render()},4000); break;
+    case "mnext": d.mstep++; break;
+    case "dnav": d.nav=true; keepScroll=true; break;
+    case "replay": FL.replay=0; break;
+    case "dcode": d.code=el.value.replace(/\D/g,"").slice(0,4); if(evType==="input"){ el.value=d.code; return;} break;
+    case "mcode": if(d.code==="4827"){d.mstep=2;toast("Code correct. Arrivée confirmée chez le client.")} else {toast("Code incorrect. Demandez au client le code à 4 chiffres affiché dans son application.");return} break;
+    case "anom": d.anoms=el.checked?[...d.anoms,v]:d.anoms.filter(x=>x!==v); keepScroll=true; break;
+    case "dcash": d.cash=v; keepScroll=true; break;
+    case "mdone": d.mstep=5; break;
+    case "mreset": d.mstep=0; d.req=true; d.view="home"; d.prog=0; d.nav=false; break;
+    case "k": S.k[v]=+el.value; break;
+    case "gview": g.view=v; break;
+    case "gtel": g.tel=el.value; if(evType==="input") return; break;
+    case "gq": g.q=el.value; keepScroll=true; break;
+    case "gvol": g.vol=+v; keepScroll=true; break;
+    case "gsend": { const P=prix({svc:"fosse",vol:g.vol,q:g.q,when:"now"},S.sim); g.sent++; g.nbApport++; g.mandat+=Math.round(P.total*T.mandat); toast("SMS envoyé au "+g.tel+" avec le prix de "+F(P.total)+"."); keepScroll=true; break; }
+    case "toast": toast(v); return;
+    default: return;
+  }
+  render();
+}
+document.addEventListener("click",e=>{
+  const el=e.target.closest("[data-a]"); if(!el) return;
+  if(el.tagName==="INPUT"||el.tagName==="SELECT"||el.tagName==="TEXTAREA"||el.tagName==="LABEL") return;
+  if(el.disabled) return;
+  e.preventDefault();
+  const a=el.dataset.a,v=el.dataset.v;
+  if(a==="go"||a==="back"){act("go",v,el);return}
+  if(a.startsWith("go:")){act("go",a.slice(3),el);return}
+  act(a,v,el,"click");
+});
+const TYPED=["repere","comment","gtel","dcode","adresse","tel","contactNom","contactTel","enr"];
+document.addEventListener("change",e=>{const el=e.target; if(!el.dataset||!el.dataset.a) return; if(TYPED.includes(el.dataset.a)&&el.tagName!=="SELECT") return; act(el.dataset.a,el.dataset.v,el,"change")});
+document.addEventListener("input",e=>{const el=e.target; if(!el.dataset||!el.dataset.a) return;
+  if(el.type==="range"){act(el.dataset.a,el.dataset.v,el,"input");return}
+  if(TYPED.includes(el.dataset.a)&&el.tagName!=="SELECT") act(el.dataset.a,el.dataset.v,el,"input");
+});
+/* ---------- animation : suivi GPS simulé ---------- */
+let last=0;
+function tick(ts){
+  const dt=last?Math.min(100,ts-last):16; last=ts;
+  const c=S.c,d=S.d;
+  if(S.tab==="client"&&c.step===2){
+    const n=DRV.length, before=Math.ceil(c.scan*n);
+    c.scan=Math.min(1.25,c.scan+dt/3600);
+    if(Math.ceil(Math.min(1,c.scan)*n)!==before&&c.scan<=1){keepScroll=true;render()}
+    if(c.scan>=1.25&&!L.on){const id=assign(c); if(id){c.drv=id;const D=DRV.find(x=>x.id===id); if(D.plan==="premium"&&c.pay==="cash")c.pay="wave"; c.step=3; render(); toast(D.n+" a reçu la demande et propose son prix.")} else {c.step=1;render();toast("Aucun camion disponible dans un rayon de "+RAYON+" km. Essayez de programmer la vidange.")}}
+  }
+  if(L.on){
+    liveTick();
+    const cur=L.cur;
+    if(S.tab==="client"&&c.step===5&&cur){
+      const D=DRV.find(x=>x.id===c.drv)||{eta:15};
+      const tr=cur.track||0;
+      c.prog1=tr>=2?1:tr===1?legP(cur):0; c.prog2=tr>=5?1:tr===4?legP(cur):0;
+      if(tr===1){moveMap("cm",1,c.prog1);const e=document.getElementById("cm-eta"),k=document.getElementById("cm-dist");if(e)e.textContent=Math.max(1,Math.ceil((1-c.prog1)*D.eta))+" min";if(k)k.textContent=((1-c.prog1)*4.2).toFixed(1).replace(".",",")+" km"}
+      if(tr===4){moveMap("cm",2,c.prog2);const e=document.getElementById("cm-eta");if(e)e.textContent=q2(prix(c,S.sim))}
+    }
+    if(S.tab==="vidangeur"&&d.view==="mission"){const j=myJob();
+      if(j&&j.status==="lancee"&&j.track===1){const p=legP(j);moveMap("dm",1,p);const n=navInstr(p),a=document.getElementById("dm-arr"),i=document.getElementById("dm-ins"),r=document.getElementById("dm-rest");if(a)a.textContent=n[0];if(i)i.textContent=n[1];if(r)r.textContent=navRest(p)}
+      if(j&&j.status==="lancee"&&j.track===4) moveMap("dm",2,legP(j));
+    }
+  }
+  if(S.tab==="client"&&c.step===5&&!L.on){
+    const D=DRV.find(x=>x.id===c.drv);
+    if(c.track===1&&c.prog1<1){
+      c.prog1=Math.min(1,c.prog1+dt/24000); moveMap("cm",1,c.prog1);
+      const e=document.getElementById("cm-eta"),k=document.getElementById("cm-dist");
+      if(e) e.textContent=Math.max(1,Math.ceil((1-c.prog1)*D.eta))+" min";
+      if(k) k.textContent=((1-c.prog1)*4.2).toFixed(1).replace(".",",")+" km";
+      if(c.prog1>=1){c.track=2;keepScroll=true;render();toast("Arrivée détectée par GPS : le chauffeur est devant chez vous.")}
+    }else if(c.track===4&&c.prog2<1){
+      c.prog2=Math.min(1,c.prog2+dt/16000); moveMap("cm",2,c.prog2);
+      const e=document.getElementById("cm-eta"); if(e) e.textContent=q2(prix(c,S.sim));
+      if(c.prog2>=1){c.track=5;keepScroll=true;render();toast("Entrée en station détectée et QR scanné : dépotage confirmé.")}
+    }
+  }
+  if(S.tab==="vidangeur"&&d.view==="mission"&&d.mstep===0&&d.nav&&d.prog<1){
+    d.prog=Math.min(1,d.prog+dt/20000); moveMap("dm",1,d.prog);
+    const n=navInstr(d.prog),a=document.getElementById("dm-arr"),i=document.getElementById("dm-ins"),r=document.getElementById("dm-rest");
+    if(a) a.textContent=n[0]; if(i) i.textContent=n[1]; if(r) r.textContent=navRest(d.prog);
+    if(d.prog>=1){d.nav=false;d.mstep=1;render();toast("Arrivée détectée par GPS. Demandez le code au client.")}
+  }
+  if(S.tab==="aaas") fleetTick(dt);
+  requestAnimationFrame(tick);
+}
+render();
+liveBoot();
+window.addEventListener("load",qrs);
+requestAnimationFrame(tick);
+})();
+</script>
+
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script>
+</body></html>

@@ -1,0 +1,16 @@
+{
+  "name": "Sëtal AAAS — vidange et curage",
+  "short_name": "Sëtal AAAS",
+  "description": "Plateforme de vidange et de curage de l'Association des Acteurs de l'Assainissement du Sénégal",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eaf3fb",
+  "theme_color": "#3d9ddf",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
